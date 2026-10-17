@@ -2,6 +2,20 @@
 
 **Open-source job discovery, semantic matching, notifications and application tracking.** A self-hosted, single-owner portfolio project with a dark dashboard inspired by Dokploy.
 
+## Release v0.5 — Manage ATS sources and add jobs manually
+
+- **Źródła ofert** section: add, pause, resume and remove employer job boards via the UI, backed by SQLite. Supports `Greenhouse` and `Lever` company board slugs, with strict validation and a cap of 20 managed sources. Environment variable boards remain enabled and read-only in the panel.
+- Existing `Arbeitnow` and optional `Adzuna` continue to work. Add-on board sources are merged with environment sources and deduplicated; scans query at most 20 company boards per provider.
+- **Manual job intake:** add a title, company, location, HTTPS link and description from a job site; JobPilot rates it using the same matching engine and stores it locally. It does not scrape, request or submit anything to the provided link.
+- New source filter in the job listings. API is protected by existing owner authentication and rate limits imposed on job fetching.
+- Database initialization is idempotent; existing volumes retain all previous data.
+
+### Add employer boards
+
+Go to **Źródła ofert**, choose Greenhouse or Lever, and provide the company's **board slug** (not the full URL). Greenhouse boards usually appear under `boards.greenhouse.io/<slug>` and Lever under `jobs.lever.co/<slug>`. JobPilot queries their documented public job-board endpoints, but a valid slug does not guarantee the board exists or allows use. After adding a source, choose **Skanuj oferty**. Provider connection errors appear in scan history.
+
+For listings outside configured feeds, select **Oferty pracy → Dodaj ofertę** and provide the job details. Duplicate manual URLs are rejected; jobs can be ranked, saved, reviewed and added to the application pipeline.
+
 ## Release v0.4 — Dokploy-inspired interface
 
 The dashboard is redesigned using a **neutral black / zinc theme** inspired by Dokploy's project and deployment screens, rather than the earlier purple SaaS theme. JobPilot uses its own name, logo and content.

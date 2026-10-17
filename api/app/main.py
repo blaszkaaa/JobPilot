@@ -83,7 +83,9 @@ def initialize():
         db.commit()
 
     from .features import initialize_features
+    from .sources import initialize_sources
     initialize_features()
+    initialize_sources()
 
 def profile_dict():
     with connection() as db:
@@ -165,7 +167,8 @@ async def fetch_jobs(client):
             })
     except (httpx.HTTPError, ValueError, KeyError, TypeError) as exc:
         errors.append("Arbeitnow: " + type(exc).__name__)
-    for board in GREENHOUSE_BOARDS[:10]:
+    from .sources import resolve_boards
+    for board in resolve_boards("greenhouse"):
         if not re.fullmatch(r"[A-Za-z0-9_-]+", board):
             continue
         try:
@@ -174,7 +177,7 @@ async def fetch_jobs(client):
             combined += [greenhouse_job(j, board) for j in res.json().get("jobs", [])[:150]]
         except (httpx.HTTPError, ValueError, KeyError, TypeError) as exc:
             errors.append(f"Greenhouse/{board}: {type(exc).__name__}")
-    for site in LEVER_SITES[:10]:
+    for site in resolve_boards("lever"):
         if not re.fullmatch(r"[A-Za-z0-9_-]+", site):
             continue
         try:
@@ -352,6 +355,7 @@ def set_profile(body: Profile, _=Depends(authenticated)):
 
 @app.get("/api/stats")
 def stats(_=Depends(authenticated)):
+    from .sources import resolve_boards
     with connection() as db:
         total = db.execute("SELECT count(*) FROM jobs").fetchone()[0]
         matched = db.execute("SELECT count(*) FROM jobs WHERE score>=? AND status != 'ignored'",
@@ -364,8 +368,8 @@ def stats(_=Depends(authenticated)):
     return {"total": total, "matched": matched, "saved": saved, "applied": applied,
             "last_sync": last_sync, "likes": likes, "dislikes": dislikes,
             "unread": unread, "telegram": bool(TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID),
-            "sources": ["Arbeitnow"] + (["Greenhouse"] if GREENHOUSE_BOARDS else []) +
-            (["Lever"] if LEVER_SITES else []) +
+            "sources": ["Arbeitnow"] + (["Greenhouse"] if resolve_boards("greenhouse") else []) +
+            (["Lever"] if resolve_boards("lever") else []) +
             (["Adzuna"] if ADZUNA_APP_ID and ADZUNA_APP_KEY else [])}
 
 @app.get("/api/jobs")
@@ -442,3 +446,5 @@ from .features import router as workspace_router
 app.include_router(workspace_router)
 from .learning import router as learning_router
 app.include_router(learning_router)
+from .sources import router as sources_router
+app.include_router(sources_router)

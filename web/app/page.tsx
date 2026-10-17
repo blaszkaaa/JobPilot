@@ -7,12 +7,13 @@ import {
   Clock3, ExternalLink, FileText, Filter, Globe2, LayoutDashboard, LoaderCircle,
   LockKeyhole, LogOut, MapPin, Menu, Radar, RefreshCcw, Search, Send,
   Settings2, ShieldCheck, SlidersHorizontal, Sparkles, Target, ThumbsUp, ThumbsDown, X,
-  PanelLeftClose, PanelLeftOpen, FolderKanban, Database, Server, Command, List, LayoutGrid, Keyboard, Terminal, ChevronUp
+  PanelLeftClose, PanelLeftOpen, FolderKanban, Database, Server, Command, List, LayoutGrid, Keyboard, Terminal, ChevronUp, Plus
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { SearchWatches, ApplicationBoard, CvUploader } from "./workspaces";
+import { SourcesWorkspace, ManualJobDialog } from "./source-workspace";
 
-type Page = "dashboard" | "jobs" | "watches" | "applications" | "notifications" | "settings";
+type Page = "dashboard" | "jobs" | "watches" | "sources" | "applications" | "notifications" | "settings";
 type Job = {
   id: string; title: string; company: string; location: string; remote: boolean;
   description: string; url: string; source: string; posted_at: string;
@@ -36,6 +37,7 @@ const menu: { page: Page; label: string; icon: LucideIcon }[] = [
   { page: "dashboard", label: "Przegląd", icon: LayoutDashboard },
   { page: "jobs", label: "Oferty pracy", icon: BriefcaseBusiness },
   { page: "watches", label: "Wyszukiwania", icon: Radar },
+  { page: "sources", label: "Źródła ofert", icon: Database },
   { page: "applications", label: "Moje aplikacje", icon: Send },
   { page: "notifications", label: "Powiadomienia", icon: Bell },
   { page: "settings", label: "Ustawienia", icon: Settings2 }
@@ -101,6 +103,8 @@ export default function Home() {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("all");
   const [remoteOnly, setRemoteOnly] = useState(false);
+  const [sourceFilter, setSourceFilter] = useState("all");
+  const [manualOpen, setManualOpen] = useState(false);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [toast, setToast] = useState("");
@@ -114,9 +118,10 @@ export default function Home() {
   const filtered = useMemo(() => jobs.filter(j => {
     const search = query.toLowerCase();
     return (status === "all" || j.status === status)
+      && (sourceFilter === "all" || j.source === sourceFilter)
       && (!remoteOnly || j.remote)
       && (!search || [j.title, j.company, j.description, j.location].some(s => s.toLowerCase().includes(search)));
-  }), [jobs, status, query, remoteOnly]);
+  }), [jobs, status, query, remoteOnly, sourceFilter]);
   const recommended = jobs.filter(j => j.score >= profile.min_score && j.status !== "ignored").slice(0, 6);
   const commandPages = menu.filter(entry => entry.label.toLocaleLowerCase("pl").includes(commandQuery.trim().toLocaleLowerCase("pl")));
   const commandJobs = commandQuery.trim().length >= 2
@@ -243,7 +248,11 @@ export default function Home() {
     });
   }
   function openSearchJob(jobId: string) {
-    navigate("jobs"); setStatus("all"); setRemoteOnly(false); setQuery(""); setSelectedId(jobId); setCommandOpen(false);
+    navigate("jobs"); setStatus("all"); setSourceFilter("all"); setRemoteOnly(false); setQuery(""); setSelectedId(jobId); setCommandOpen(false);
+  }
+  async function onManualJobImported(jobId: string) {
+    setManualOpen(false); await load(); openSearchJob(jobId);
+    setToast("Oferta została dodana i oceniona przez silnik dopasowania");
   }
 
   if (auth === "checking") return <div className="initial-loader"><Radar size={30}/><LoaderCircle className="spin" size={22}/></div>;
@@ -319,6 +328,7 @@ export default function Home() {
           <div className="command-footer"><span><kbd>↵</kbd> Wybierz pierwszy</span><span><kbd>ESC</kbd> Zamknij</span></div>
         </div>
       </div>}
+      {manualOpen && <ManualJobDialog onClose={() => setManualOpen(false)} onImported={id => void onManualJobImported(id)} onError={setError}/>}
       <main className="content">
         {error && <div className="notice-error"><CircleHelp size={17}/>{error}<button onClick={() => setError("")} aria-label="Zamknij błąd"><X size={15}/></button></div>}
         {toast && <div className="toast"><CheckCircle2 size={17}/>{toast}</div>}
@@ -347,7 +357,7 @@ export default function Home() {
           <div className="service-heading"><div><h2>Źródła ofert</h2><p>Połączenia skonfigurowane na tej instancji</p></div><button className="btn secondary" onClick={() => navigate("settings")}><Settings2 size={14}/> Konfiguruj</button></div>
           <div className="services-grid">
             {["Arbeitnow", "Adzuna", "Greenhouse", "Lever"].map(source => <button
-              key={source} className="service-tile" onClick={() => navigate(source === "Adzuna" ? "watches" : "settings")}>
+              key={source} className="service-tile" onClick={() => navigate(source === "Adzuna" ? "watches" : "sources")}>
               <div className="service-tile-head"><span className="service-tile-icon"><Database size={17}/></span><span className={"service-indicator " + (stats.sources.includes(source) ? "active" : "")}/></div>
               <strong>{source}</strong>
               <small>{stats.sources.includes(source) ? "Skonfigurowane" : "Nie skonfigurowano"}</small>
@@ -381,9 +391,11 @@ export default function Home() {
         </>}
         {page === "jobs" && <>
           <div className="heading-row"><div><div className="eyebrow"><Globe2 size={14}/> JOB DISCOVERY</div><h1>Oferty pracy</h1><p>Przeglądaj, oceniaj i zapisuj dopasowane ogłoszenia.</p></div>
-            <button className="btn primary" disabled={busy === "sync"} onClick={synchronize}>{busy === "sync" ? <LoaderCircle className="spin" size={16}/> : <RefreshCcw size={16}/>} Odśwież</button></div>
+            <div className="job-header-actions"><button className="btn secondary" onClick={() => setManualOpen(true)}><Plus size={15}/> Dodaj ofertę</button>
+              <button className="btn primary" disabled={busy === "sync"} onClick={synchronize}>{busy === "sync" ? <LoaderCircle className="spin" size={16}/> : <RefreshCcw size={16}/>} Odśwież</button></div></div>
           <div className="filters"><div className="searchbox"><Search size={17}/><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Stanowisko, firma, umiejętności..." /></div>
             <div className="select-wrap"><Filter size={15}/><select aria-label="Status oferty" value={status} onChange={e => setStatus(e.target.value)}><option value="all">Wszystkie statusy</option><option value="new">Nowe</option><option value="saved">Zapisane</option><option value="applied">Aplikowano</option><option value="ignored">Odrzucone</option></select><ChevronDown size={13}/></div>
+            <div className="select-wrap"><Database size={14}/><select aria-label="Źródło oferty" value={sourceFilter} onChange={e => setSourceFilter(e.target.value)}><option value="all">Wszystkie źródła</option>{Array.from(new Set(jobs.map(j => j.source))).sort().map(source => <option key={source} value={source}>{source}</option>)}</select><ChevronDown size={13}/></div>
             <label className="toggle-filter"><input type="checkbox" checked={remoteOnly} onChange={e => setRemoteOnly(e.target.checked)}/> Tylko zdalne</label>
           </div>
           <div className="jobs-layout"><section className="panel job-list-panel">
@@ -424,6 +436,7 @@ export default function Home() {
           </> : <div className="detail-placeholder"><div className="placeholder-icon"><BriefcaseBusiness size={28}/></div><h3>Wybierz ofertę</h3><p>Kliknij ogłoszenie z listy, aby zobaczyć szczegóły, dopasowanie i dostępne działania.</p></div>}</section></div>
         </>}
         {page === "watches" && <SearchWatches sources={stats.sources} onMessage={setToast} onError={setError}/>}
+        {page === "sources" && <SourcesWorkspace onMessage={setToast} onError={setError} onChanged={load}/>}
         {page === "applications" && <ApplicationBoard onMessage={setToast} onError={setError} onChanged={load}/>}
 
         {page === "notifications" && <><PageHeading eyebrow="ALERT CENTER" icon={Bell} title="Powiadomienia" desc="Nowe dopasowane oferty i przypomnienia o kontakcie z rekruterem."/>
@@ -455,7 +468,8 @@ export default function Home() {
           </section>
           <div className="settings-side"><section className="panel small-panel"><div className="panel-header"><div><h2><Globe2 size={18}/> Źródła ofert</h2><p>Aktywne integracje API</p></div></div>
             {["Arbeitnow", "Greenhouse", "Lever", "Adzuna"].map(source => <div className="info-line" key={source}><span>{source}</span><span className={"tag " + (stats.sources.includes(source) ? "green" : "")}>{stats.sources.includes(source) ? "Aktywne" : "Wymaga konfiguracji"}</span></div>)}
-            <p className="subtle-note">Dodaj identyfikatory firm Greenhouse i Lever lub klucze Adzuna w zmiennych środowiskowych Dokploy.</p>
+            <p className="subtle-note">Greenhouse i Lever możesz teraz skonfigurować bezpośrednio w panelu. Klucze Adzuna pozostają w ustawieniach Dokploy.</p>
+            <button className="btn secondary fill" onClick={() => navigate("sources")}><Database size={14}/> Zarządzaj źródłami</button>
           </section><section className="panel small-panel"><div className="panel-header"><div><h2><ShieldCheck size={18}/> Integracja ChatGPT</h2><p>Bezpieczeństwo planu użytkownika</p></div></div>
             <div className="info-pill"><LockKeyhole size={15}/> OAuth nieaktywny na serwerze</div>
             <p className="subtle-note">Logowanie kontem ChatGPT i korzystanie z subskrypcji wymaga zgodnego z zasadami, lokalnego klienta Sign in with ChatGPT. Wersja serwerowa nie przechowuje tokenów ChatGPT.</p>

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import "./workspaces.css";
 import "./dokploy.css";
+import "./source-workspace.css";
 
 export const metadata: Metadata = {
   title: "JobPilot — Job Discovery Platform",
