@@ -117,12 +117,13 @@ export function ManualJobDialog({ onClose, onImported, onError }: {
 }) {
   const [form, setForm] = useState<ManualForm>(emptyForm);
   const [busy, setBusy] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   async function submit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault(); setBusy(true);
+    event.preventDefault(); setBusy(true); setSubmitError("");
     try {
       const result = await request<{ job_id: string }>("/api/jobs/manual", { method: "POST", body: JSON.stringify(form) });
       onImported(result.job_id);
-    } catch (err) { onError((err as Error).message); }
+    } catch (err) { setSubmitError((err as Error).message); onError((err as Error).message); }
     finally { setBusy(false); }
   }
   return <div className="manual-modal-scrim" onMouseDown={onClose}>
@@ -138,6 +139,7 @@ export function ManualJobDialog({ onClose, onImported, onError }: {
         <label>Link do oryginalnego ogłoszenia<input required type="url" pattern="https://.*" maxLength={2000} value={form.url} onChange={e => setForm({ ...form, url: e.target.value })} placeholder="https://firma.pl/kariera/oferta"/></label>
         <label>Opis oferty<textarea required minLength={30} maxLength={12000} rows={6} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Wklej treść oferty, wymagania i zakres obowiązków..."/></label>
         <label className="source-inline-checkbox"><input type="checkbox" checked={form.remote} onChange={e => setForm({ ...form, remote: e.target.checked })}/> Oferta umożliwia pracę zdalną</label>
+        {submitError && <p className="form-error" role="alert">{submitError}</p>}
         <div className="manual-modal-footer"><span><ShieldCheck size={14}/> Nie wysyłamy zgłoszenia do pracodawcy</span>
           <div><button className="btn secondary" type="button" onClick={onClose}>Anuluj</button><button className="btn primary" type="submit" disabled={busy}>{busy ? <LoaderCircle className="spin" size={15}/> : <Check size={15}/>} Dodaj i oceń dopasowanie</button></div></div>
       </form>

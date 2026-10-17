@@ -4,6 +4,7 @@ Requests to external URLs are NOT made for manually entered job links; the
 registered board adapter builds HTTPS endpoints on trusted provider hosts.
 """
 import hashlib
+import ipaddress
 import re
 from datetime import datetime, timezone
 from typing import Literal
@@ -136,8 +137,14 @@ def verified_job_link(url: str):
                 or any(char.isspace() for char in raw)
                 or u.hostname in {"localhost", "127.0.0.1", "::1"}):
             raise ValueError("invalid")
-        # A normal public DNS hostname; reject IP literals and local names.
+        # Require a public DNS name; do not allow IP literals or local names.
         if "." not in u.hostname or u.hostname.endswith((".local", ".internal", ".test")):
+            raise ValueError("invalid")
+        try:
+            ipaddress.ip_address(u.hostname)
+        except ValueError:
+            pass
+        else:
             raise ValueError("invalid")
         return raw
     except ValueError:

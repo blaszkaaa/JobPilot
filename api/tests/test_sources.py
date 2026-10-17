@@ -1,6 +1,8 @@
 """Source management and manual-offer integration tests."""
+import asyncio
 import os
 import tempfile
+import httpx
 import unittest
 from pathlib import Path
 from fastapi.testclient import TestClient
@@ -102,10 +104,54 @@ class SourceTests(unittest.TestCase):
         for url in [
             "javascript:alert(1)", "http://example.com/listing",
             "https://localhost/private", "https://127.0.0.1/private",
-            "https://evil@public.example.com/listing", "https://foo.internal/a"
+            "https://evil@public.example.com/listing", "https://foo.internal/a",
+            "https://8.8.8.8/listing"
         ]:
             reply = self.client.post("/api/jobs/manual", json={**template, "url": url})
             self.assertIn(reply.status_code, (422,), (url, reply.text))
+
+    def test_concurrent_sources_and_isolated_provider_failure(self):
+        main.GREENHOUSE_BOARDS = ["working-board", "failed-board"]
+        main.LEVER_SITES = ["my-lever"]
+        metrics = {"active": 0, "peak": 0}
+        class FakeResponse:
+            def __init__(self, body):
+                self.body = body
+            def raise_for_status(self):
+                return None
+            def json(self):
+                return self.body
+
+        class FakeClient:
+            async def get(self, url, params=None):
+                if "arbeitnow" in url:
+                    return FakeResponse({"data": []})
+                metrics["active"] += 1
+                metrics["peak"] = max(metrics["peak"], metrics["active"])
+                try:
+                    await asyncio.sleep(0.01)
+                    if "failed-board" in url:
+                        raise httpx.HTTPError("unavailable")
+                    if "greenhouse" in url:
+                        return FakeResponse({"jobs": [{
+                            "id": 1, "title": "Python engineer",
+                            "location": {"name": "Remote"},
+                            "absolute_url": "https://boards.greenhouse.io/working-board/jobs/1"
+                        }]})
+                    return FakeResponse([{
+                        "id": "lever-1", "text": "Backend developer",
+                        "categories": {"location": "Remote"},
+                        "hostedUrl": "https://jobs.lever.co/my-lever/lever-1"
+                    }])
+                finally:
+                    metrics["active"] -= 1
+
+        jobs, errors = asyncio.run(main.fetch_jobs(FakeClient()))
+        self.assertEqual(len(jobs), 2)
+        self.assertGreaterEqual(metrics["peak"], 2)
+        self.assertEqual(len(errors), 1)
+        self.assertIn("failed-board", errors[0])
+        self.assertEqual({j["source"] for j in jobs}, {"Greenhouse", "Lever"})
 
     def test_no_guest_access(self):
         guest = TestClient(main.app)

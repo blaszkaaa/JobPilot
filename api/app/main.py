@@ -168,24 +168,41 @@ async def fetch_jobs(client):
     except (httpx.HTTPError, ValueError, KeyError, TypeError) as exc:
         errors.append("Arbeitnow: " + type(exc).__name__)
     from .sources import resolve_boards
-    for board in resolve_boards("greenhouse"):
-        if not re.fullmatch(r"[A-Za-z0-9_-]+", board):
-            continue
-        try:
-            res = await client.get(f"https://boards-api.greenhouse.io/v1/boards/{board}/jobs", params={"content": "true"})
-            res.raise_for_status()
-            combined += [greenhouse_job(j, board) for j in res.json().get("jobs", [])[:150]]
-        except (httpx.HTTPError, ValueError, KeyError, TypeError) as exc:
-            errors.append(f"Greenhouse/{board}: {type(exc).__name__}")
-    for site in resolve_boards("lever"):
-        if not re.fullmatch(r"[A-Za-z0-9_-]+", site):
-            continue
-        try:
-            res = await client.get(f"https://api.lever.co/v0/postings/{site}", params={"mode": "json"})
-            res.raise_for_status()
-            combined += [lever_job(j, site) for j in res.json()[:150]]
-        except (httpx.HTTPError, ValueError, KeyError, TypeError) as exc:
-            errors.append(f"Lever/{site}: {type(exc).__name__}")
+    semaphore = asyncio.Semaphore(5)
+
+    async def fetch_board(provider, slug):
+        # Slugs are validated and the hostname is fixed (no URL supplied by users).
+        async with semaphore:
+            try:
+                if provider == "greenhouse":
+                    res = await client.get(
+                        f"https://boards-api.greenhouse.io/v1/boards/{slug}/jobs",
+                        params={"content": "true"})
+                    res.raise_for_status()
+                    jobs = [greenhouse_job(j, slug) for j in res.json().get("jobs", [])[:150]]
+                else:
+                    res = await client.get(
+                        f"https://api.lever.co/v0/postings/{slug}", params={"mode": "json"})
+                    res.raise_for_status()
+                    jobs = [lever_job(j, slug) for j in res.json()[:150]]
+                return jobs, None
+            except (httpx.HTTPError, ValueError, KeyError, TypeError, AttributeError) as exc:
+                # Log bounded, non-secret details; never show raw response bodies.
+                error = type(exc).__name__
+                if isinstance(exc, httpx.HTTPStatusError):
+                    error += f" HTTP {exc.response.status_code}"
+                return [], f"{provider.title()}/{slug}: {error}"
+
+    board_specs = [("greenhouse", slug) for slug in resolve_boards("greenhouse")]
+    board_specs += [("lever", slug) for slug in resolve_boards("lever")]
+    if board_specs:
+        # Independent providers are fetched concurrently: one broken company
+        # board cannot stall every remaining source.
+        fetched = await asyncio.gather(*(fetch_board(provider, slug) for provider, slug in board_specs))
+        for listings, error in fetched:
+            combined.extend(listings)
+            if error:
+                errors.append(error)
     if ADZUNA_APP_ID and ADZUNA_APP_KEY and re.fullmatch(r"[a-z]{2}", ADZUNA_COUNTRY):
         # Saved searches add precise, user-managed queries. Fallback preserves v0.1 behaviour.
         from .features import active_watches
