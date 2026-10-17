@@ -23,12 +23,14 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 type Props = { onMessage: (s: string) => void; onError: (s: string) => void; onChanged: () => Promise<void> };
-export function SourcesWorkspace({ onMessage, onError, onChanged }: Props) {
+export function SourcesWorkspace({ onMessage, onError, onChanged, searchLocation = "Polska" }: Props & { searchLocation?: string }) {
   const [sources, setSources] = useState<Sources | null>(null);
   const [provider, setProvider] = useState<"greenhouse" | "lever">("greenhouse");
   const [slug, setSlug] = useState("");
   const [label, setLabel] = useState("");
   const [busy, setBusy] = useState("");
+  const [marketQuery, setMarketQuery] = useState("RPA Developer");
+  const [marketLocation, setMarketLocation] = useState(searchLocation && searchLocation.toLocaleLowerCase("pl") !== "polska" ? searchLocation.split(",")[0].trim() : "");
   const load = useCallback(async () => {
     try { setSources(await request<Sources>("/api/sources")); }
     catch (err) { onError((err as Error).message); }
@@ -70,6 +72,7 @@ export function SourcesWorkspace({ onMessage, onError, onChanged }: Props) {
         <p>Połącz publiczne tablice rekrutacyjne firm bez edytowania plików na serwerze.</p></div>
       <span className="tag purple">{managed} / {sources?.limits.max_managed ?? 20} dodanych</span>
     </div>
+    <ExternalJobBoards query={marketQuery} setQuery={setMarketQuery} location={marketLocation} setLocation={setMarketLocation}/>
     <div className="sources-stats">
       <div className="sources-overview-card"><div className="sources-card-icon"><Globe2 size={19}/></div><div><strong>Arbeitnow</strong><span>Domyślne, publiczne API</span></div><span className="tag green">Skonfigurowane</span></div>
       <div className="sources-overview-card"><div className="sources-card-icon"><Database size={19}/></div><div><strong>Adzuna Polska</strong><span>Wyszukiwania według fraz</span></div><span className={"tag " + (sources?.providers.adzuna ? "green" : "")}>{sources?.providers.adzuna ? "Skonfigurowane" : "Wymaga kluczy"}</span></div>
@@ -145,4 +148,66 @@ export function ManualJobDialog({ onClose, onImported, onError }: {
       </form>
     </div>
   </div>;
+}
+
+
+/* These are genuine browser-opened job portals, not API connectors.
+   URLs never include the user's CV, profile, email or session credentials. */
+type BoardLink = { id: string; label: string; description: string; url: string; supportsSearch: boolean };
+
+function buildExternalBoards(query: string, city: string): BoardLink[] {
+  const q = (query.trim() || "RPA Developer").slice(0, 90);
+  const location = city.trim().slice(0, 80);
+  // Pracuj uses encoded query and location segments in official search URLs.
+  const region = location.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/ł/g, "l").replace(/[^a-z0-9 -]/g, "").trim().replace(/\s+/g, "-");
+  const pracuj = "https://www.pracuj.pl/praca/" + encodeURIComponent(q) + "%3Bkw" +
+    (region ? "/" + encodeURIComponent(region) + "%3Bwp" : "");
+  const indeed = "https://pl.indeed.com/jobs?q=" + encodeURIComponent(q) +
+    (location ? "&l=" + encodeURIComponent(location) : "");
+  return [
+    { id: "pracuj", label: "Pracuj.pl", description: "Polski portal ofert pracy · otwarcie wyników wyszukiwania",
+      url: pracuj, supportsSearch: true },
+    { id: "indeed", label: "Indeed", description: "Wyszukiwanie na Indeed · wyniki otwierają się na stronie serwisu",
+      url: indeed, supportsSearch: true },
+    { id: "linkedin", label: "LinkedIn Jobs", description: "Oferty i rekrutacje w LinkedIn · wyszukaj frazę w serwisie",
+      url: "https://www.linkedin.com/jobs/", supportsSearch: false },
+    { id: "justjoin", label: "Just Join IT", description: "Technologia, Python, AI i IT · wyszukiwanie w serwisie",
+      url: "https://justjoin.it/job-offers/all-locations", supportsSearch: false },
+    { id: "nofluff", label: "No Fluff Jobs", description: "IT, dane, AI i automatyzacje · wyszukiwanie w serwisie",
+      url: "https://nofluffjobs.com/pl", supportsSearch: false },
+    { id: "rocket", label: "RocketJobs", description: "Oferty różnych specjalizacji · wyszukiwanie w serwisie",
+      url: "https://rocketjobs.pl/oferty-pracy", supportsSearch: false },
+    { id: "olx", label: "OLX Praca", description: "Oferty pracy w Polsce · wyszukiwanie w serwisie",
+      url: "https://www.olx.pl/praca/", supportsSearch: false },
+  ];
+}
+
+function ExternalJobBoards({ query, setQuery, location, setLocation }: {
+  query: string; setQuery: (value: string) => void; location: string; setLocation: (value: string) => void;
+}) {
+  const boards = buildExternalBoards(query, location);
+  return <section className="panel portal-panel">
+    <div className="panel-header"><div><h2><Globe2 size={18}/> Polskie portale pracy</h2>
+      <p>Pracuj.pl, Indeed, LinkedIn i inne wyszukiwarki</p></div>
+      <span className="tag">7 serwisów</span>
+    </div>
+    <div className="portal-search-bar">
+      <label>Poszukiwane stanowisko<input value={query} maxLength={90}
+        onChange={event => setQuery(event.target.value)} placeholder="np. Junior RPA Developer"/></label>
+      <label>Miasto (opcjonalnie)<input value={location} maxLength={80}
+        onChange={event => setLocation(event.target.value)} placeholder="np. Poznań"/></label>
+    </div>
+    <div className="portal-list">{boards.map(board => <div className="portal-item" key={board.id}>
+      <div className="portal-mark">{board.label.slice(0, 2).toUpperCase()}</div>
+      <div className="portal-text"><strong>{board.label}</strong><small>{board.description}</small></div>
+      <a href={board.url} target="_blank" rel="noopener noreferrer" className="btn secondary"
+        aria-label={"Otwórz " + board.label}><ExternalLink size={15}/> Szukaj</a>
+    </div>)}</div>
+    <p className="portal-legal"><ShieldCheck size={15}/>
+      Te serwisy są zewnętrznymi wyszukiwarkami, nie automatycznymi integracjami API.
+      Wyniki otwierają się w nowej karcie, a JobPilot nie pobiera danych LinkedIn ani nie wysyła tam CV.
+      Znalezione ogłoszenie możesz wprowadzić ręcznie w zakładce „Oferty pracy”.
+    </p>
+  </section>;
 }

@@ -2,6 +2,29 @@
 
 **Open-source job discovery, semantic matching, notifications and application tracking.** A self-hosted, single-owner portfolio project with a dark dashboard inspired by Dokploy.
 
+## Release v0.7 — Private PDF resume and additional job portals
+
+- Authenticated **CV PDF vault**: upload, replace, download or delete the original PDF in the existing SQLite volume. PDF is validated (max 2 MB / 12 pages, text must be readable) and **is never committed to GitHub**.
+- Upload synchronizes the extracted CV text with your JobPilot profile and recomputes matching. The original PDF stays available for download until deleted.
+- Deleting only the PDF **keeps text already extracted to the profile**. To delete personal data fully, also clear the profile CV text under Settings and follow normal database/backup retention practices.
+- Admin-only storage, no-store response headers for file downloads, no changes to user password or login system.
+- A new **Polskie portale pracy** panel in **Źródła ofert** links to Pracuj.pl, Indeed, LinkedIn Jobs, Just Join IT, No Fluff Jobs, RocketJobs and OLX Praca. The first two construct job-search URLs using the supplied search query and city; the others open official job portals for the user to search.
+- **Important:** these are browser-only external search links, not automated server-side scrapers, not background monitored sources, and **not auto-application connectors**. JobPilot does not transfer CV, cookies or profile data to them. Job listings can be added manually with **Dodaj ofertę**.
+- Environment credentials for existing official/authorized API sources continue to work.
+- **Private installation note:** Do not store real CV PDFs, identity information or production secrets in a public repo, build args or GitHub Actions artifacts. Redeploy latest main, then upload the original PDF from the logged-in Settings screen. No live Dokploy access is provided to the GitHub build.
+
+### CV upload instructions
+
+1. Redeploy `main` in Dokploy, preserving the named SQLite volume (`jobpilot-data`).
+2. Log in to JobPilot over HTTPS and open `Ustawienia`.
+3. In **Twój dokument CV**, use **Wgraj PDF CV**, select the PDF (max 2 MB), then check the saved filename and download if desired.
+4. Edit other profile fields under **Ustawienia**; the PDF import automatically updates only `cv_text`, while your keywords, location and preferred work mode remain unchanged.
+5. In **Źródła ofert**, search Pracuj.pl / Indeed or follow portal links. Add relevant discovered postings in **Oferty pracy → Dodaj ofertę**.
+
+### Privacy and retention
+
+The existing database saves both the PDF bytes and extracted CV text **unencrypted at rest** on the VPS (no external AI vendor receives the file). Secure the Dokploy/VPS account and database volume, restrict access to backups, protect the domain with HTTPS, and delete the file and profile text when no longer needed. Deleting from the active database does not necessarily remove historical backups.
+
 ## Release v0.6 — CV vs. job analysis
 
 A new **Analiza CV** workspace compares the text of the self-hosted resume against technologies named in individual job listings. Open it from the navigation or use **Analizuj moje CV** while viewing a job.

@@ -10,7 +10,8 @@ import {
   PanelLeftClose, PanelLeftOpen, FolderKanban, Database, Server, Command, List, LayoutGrid, Keyboard, Terminal, ChevronUp, Plus, FileSearch
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { SearchWatches, ApplicationBoard, CvUploader } from "./workspaces";
+import { SearchWatches, ApplicationBoard } from "./workspaces";
+import { StoredCvPanel } from "./stored-cv-panel";
 import { SourcesWorkspace, ManualJobDialog } from "./source-workspace";
 import { CVAnalysisWorkspace } from "./cv-analysis-workspace";
 
@@ -265,7 +266,7 @@ export default function Home() {
     <aside className={"sidebar " + (sidebarOpen ? "mobile-open" : "")}>
       <div className="brand">
         <div className="brand-icon"><Radar size={19} strokeWidth={2}/></div>
-        <span className="brand-name">JobPilot <small>v0.6</small></span>
+        <span className="brand-name">JobPilot <small>v0.7</small></span>
         <button className="icon-button sidebar-collapse-button" title={sidebarCollapsed ? "Rozwiń menu" : "Zwiń menu"} aria-label={sidebarCollapsed ? "Rozwiń menu" : "Zwiń menu"} onClick={toggleSidebar}>
           {sidebarCollapsed ? <PanelLeftOpen size={17}/> : <PanelLeftClose size={17}/>}
         </button>
@@ -357,7 +358,7 @@ export default function Home() {
             <StatCard label="Zapisane" value={stats.saved} icon={Bookmark} sub={"Oceny: " + stats.likes + " lubię / " + stats.dislikes + " nie interesuje"}/>
             <StatCard label="Aplikacje" value={stats.applied} icon={Send} sub="Wysłane i w rekrutacji"/>
           </div>
-          <div className="service-heading"><div><h2>Źródła ofert</h2><p>Połączenia skonfigurowane na tej instancji</p></div><button className="btn secondary" onClick={() => navigate("settings")}><Settings2 size={14}/> Konfiguruj</button></div>
+          <div className="service-heading"><div><h2>Źródła ofert</h2><p>Oficjalne API i zewnętrzne wyszukiwarki</p></div><button className="btn secondary" onClick={() => navigate("settings")}><Settings2 size={14}/> Konfiguruj</button></div>
           <div className="services-grid">
             {["Arbeitnow", "Adzuna", "Greenhouse", "Lever"].map(source => <button
               key={source} className="service-tile" onClick={() => navigate(source === "Adzuna" ? "watches" : "sources")}>
@@ -441,7 +442,7 @@ export default function Home() {
         </>}
         {page === "cv" && <CVAnalysisWorkspace jobs={jobs} initialJobId={cvJobId} onOpenJob={openSearchJob} onEditCv={() => navigate("settings")} onMessage={setToast}/>}
         {page === "watches" && <SearchWatches sources={stats.sources} onMessage={setToast} onError={setError}/>}
-        {page === "sources" && <SourcesWorkspace onMessage={setToast} onError={setError} onChanged={load}/>}
+        {page === "sources" && <SourcesWorkspace onMessage={setToast} onError={setError} onChanged={load} searchLocation={profile.location}/>}
         {page === "applications" && <ApplicationBoard onMessage={setToast} onError={setError} onChanged={load}/>}
 
         {page === "notifications" && <><PageHeading eyebrow="ALERT CENTER" icon={Bell} title="Powiadomienia" desc="Nowe dopasowane oferty i przypomnienia o kontakcie z rekruterem."/>
@@ -465,7 +466,7 @@ export default function Home() {
               <label>Umiejętności i słowa kluczowe<small>Oddziel przecinkami</small><textarea rows={3} value={profile.keywords} onChange={e => setProfile({ ...profile, keywords: e.target.value })} placeholder="Python, REST API, FastAPI, AI"/></label>
               <label>Wykluczone frazy<small>Oferty zawierające te frazy otrzymają wynik 0%</small><input value={profile.excluded} onChange={e => setProfile({ ...profile, excluded: e.target.value })} placeholder="Np. Senior, staż"/></label>
               <label>Treść CV<small>Wklej tekst CV lub wczytaj plik PDF — nic nie jest wysyłane do zewnętrznego modelu</small><textarea rows={7} value={profile.cv_text} onChange={e => setProfile({ ...profile, cv_text: e.target.value })} placeholder="Opis doświadczenia, projektów i technologii..."/></label>
-              <CvUploader onImported={text => setProfile(current => ({ ...current, cv_text: text }))} onMessage={setToast} onError={setError}/>
+              <StoredCvPanel onSaved={load} onMessage={setToast} onError={setError}/>
               <label className="checkbox-row"><input type="checkbox" checked={profile.remote_only} onChange={e => setProfile({ ...profile, remote_only: e.target.checked })}/><span>Uwzględniaj w rankingu tylko oferty zdalne</span></label>
               <label>Próg powiadomień: <strong>{profile.min_score}%</strong><input type="range" min="0" max="100" value={profile.min_score} onChange={e => setProfile({ ...profile, min_score: Number(e.target.value) })}/></label>
               <button className="btn primary" disabled={busy === "profile"} onClick={saveProfile}>{busy === "profile" ? <LoaderCircle className="spin" size={16}/> : <Check size={16}/>} Zapisz zmiany</button>

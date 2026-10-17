@@ -84,8 +84,10 @@ def initialize():
 
     from .features import initialize_features
     from .sources import initialize_sources
+    from .cv_storage import initialize_cv_storage
     initialize_features()
     initialize_sources()
+    initialize_cv_storage()
 
 def profile_dict():
     with connection() as db:
@@ -468,3 +470,5 @@ app.include_router(sources_router)
 
 from .cv_analysis import router as cv_analysis_router
 app.include_router(cv_analysis_router)
+from .cv_storage import router as cv_storage_router
+app.include_router(cv_storage_router)

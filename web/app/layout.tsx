@@ -4,6 +4,7 @@ import "./workspaces.css";
 import "./dokploy.css";
 import "./source-workspace.css";
 import "./cv-analysis-workspace.css";
+import "./career-portals.css";
 
 export const metadata: Metadata = {
   title: "JobPilot — Job Discovery Platform",
