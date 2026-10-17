@@ -264,7 +264,7 @@ export default function Home() {
         {page === "watches" && <SearchWatches sources={stats.sources} onMessage={setToast} onError={setError}/>}
         {page === "applications" && <ApplicationBoard onMessage={setToast} onError={setError} onChanged={load}/>}
 
-        {page === "notifications" && <><PageHeading eyebrow="ALERT CENTER" icon={Bell} title="Powiadomienia" desc="Informacje o nowo znalezionych dopasowaniach."/>
+        {page === "notifications" && <><PageHeading eyebrow="ALERT CENTER" icon={Bell} title="Powiadomienia" desc="Nowe dopasowane oferty i przypomnienia o kontakcie z rekruterem."/>
           <section className="panel data-panel"><div className="panel-bar"><strong>Ostatnie zdarzenia</strong><span>Telegram: {stats.telegram ? "skonfigurowany" : "niepołączony"}</span></div>
             {notices.length ? notices.map(n => <div key={n.id} className="event-row"><div className="event-icon"><Bell size={17}/></div><div><strong>{n.message}</strong><small>{shortDate(n.created_at)}</small></div></div>) : <Empty icon={Bell} title="Brak powiadomień" message="Nowe oferty spełniające Twój próg dopasowania pojawią się tutaj."/>}</section>
         </>}

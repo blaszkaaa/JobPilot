@@ -57,6 +57,9 @@ def initialize_features():
         }.items():
             if col not in fields:
                 db.execute(f"ALTER TABLE applications ADD COLUMN {col} {spec}")
+        db.execute("""CREATE TABLE IF NOT EXISTS reminder_delivery (
+            reminder_key TEXT PRIMARY KEY, created_at TEXT NOT NULL
+        )""")
         db.execute("UPDATE applications SET status='applied' WHERE status='manual'")
         db.execute("UPDATE applications SET updated_at=created_at WHERE updated_at IS NULL")
         db.commit()
@@ -214,6 +217,32 @@ def delete_application(app_id: int):
         db.execute("UPDATE jobs SET status='saved' WHERE id=? AND status='applied'", (row["job_id"],))
         db.commit()
     return {"ok": True}
+
+
+def queue_due_followups(today: date | None = None):
+    """Queue a single in-app alert per follow-up date. No false auto-contact claim."""
+    due = (today or date.today()).isoformat()
+    alerts = []
+    with main.connection() as db:
+        rows = db.execute("""
+            SELECT a.id,a.job_id,a.follow_up,a.status,j.title,j.company,j.url
+            FROM applications a JOIN jobs j ON j.id=a.job_id
+            WHERE a.follow_up IS NOT NULL AND a.follow_up <= ?
+              AND a.status IN ('applied','interview','offer')
+            ORDER BY a.follow_up LIMIT 100
+        """, (due,)).fetchall()
+        for row in rows:
+            key = f"followup:{row['id']}:{row['follow_up']}"
+            now = main.current_utc()
+            inserted = db.execute("INSERT OR IGNORE INTO reminder_delivery(reminder_key,created_at) VALUES (?,?)",
+                                  (key, now))
+            if inserted.rowcount:
+                message = f"Przypomnienie: {row['title']} • {row['company']} — kontakt do {row['follow_up']}"
+                db.execute("INSERT INTO notifications(job_id,message,created_at) VALUES (?,?,?)",
+                           (row['job_id'], message, now))
+                alerts.append({"text": message, "url": row["url"]})
+        db.commit()
+    return alerts
 
 
 def csv_cell(value):

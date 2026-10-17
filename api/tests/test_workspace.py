@@ -89,6 +89,19 @@ class WorkspaceTests(unittest.TestCase):
         self.assertIn("potwierdził", history[0]["event"])
         self.assertEqual(self.client.delete(f"/api/applications/pipeline/{app_id}").status_code, 200)
 
+    def test_followup_alert_is_sent_once(self):
+        prepared = self.client.post("/api/applications/prepare", json={"job_id": "test:100"}).json()
+        app_id = prepared["id"]
+        response = self.client.patch(f"/api/applications/pipeline/{app_id}", json={
+            "status": "interview", "follow_up": "2026-01-01",
+            "notes": "", "letter": "Example"
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(features.queue_due_followups()), 1)
+        self.assertEqual(len(features.queue_due_followups()), 0)
+        notices = self.client.get("/api/notifications").json()
+        self.assertTrue(any("Przypomnienie" in n["message"] for n in notices))
+
     def test_invalid_stage_and_cv_import(self):
         response = self.client.post("/api/applications/prepare", json={"job_id": "unknown"})
         self.assertEqual(response.status_code, 404)

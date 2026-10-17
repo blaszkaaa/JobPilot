@@ -8,7 +8,7 @@
 - Fetch jobs from **Arbeitnow** and optionally **Greenhouse**, **Lever** and **Adzuna (Poland)** official job APIs. No prohibited LinkedIn scraping.
 - **ML-based matching:** TF-IDF + cosine similarity, weighted against job keywords, location and remote preferences. Scores are heuristic relevance indicators, **not** hiring probabilities. ChatGPT is **not** powering the server in this release.
 - Personal profile, pasted resume text **or PDF CV import (2 MB, 12 pages)**; exclusions, remote-only preference and matching threshold. Raw PDF is processed transiently in the backend, and its extracted text is saved only when you confirm. Scanned PDFs require OCR (not implemented).
-- Search, filter, save/ignore jobs; **up to five saved searches** (query, location, enable/disable) for official Adzuna API; previous single-query fallback stays available until any search is created. Other provider feeds are unaffected.\n- **Application pipeline**: draft → applied → interview → offer/rejected/withdrawn, notes, editable cover-letter draft, follow-up date, stage history, CSV export. Status ‘applied’ is **manual confirmation**, not evidence of platform submission.
+- Search, filter, save/ignore jobs; **up to five saved searches** (query, location, enable/disable) for official Adzuna API; previous single-query fallback stays available until any search is created. Other provider feeds are unaffected.\n- **Application pipeline**: draft → applied → interview → offer/rejected/withdrawn, notes, editable cover-letter draft, follow-up date, stage history, CSV export, and reminder notifications (one per due date). Status ‘applied’ is **manual confirmation**, not evidence of platform submission.
 - Create and edit truthful, reusable application draft and copy it to clipboard. **No automatic submissions yet.**
 - Optional Telegram alerts, automated polling every 30 minutes, SQLite persistence.
 - Responsive Next.js dashboard, FastAPI backend, Docker Compose setup.
@@ -62,7 +62,7 @@ This is a **real MVP**, not a production multi-tenant SaaS. One owner per deploy
 
 Upcoming features:
 1. Better deduplication and location parsing (currently deduplication by provider ID).
-2. Per-company boards configuration from UI, real notification preferences, scheduled job queues and follow-up reminders (dates are currently recorded but not pushed as reminders).
+2. Per-company boards configuration from UI, real notification preferences, scheduled job queues and configurable follow-up reminders (currently queued on each scan and optionally delivered through Telegram; no instant scheduler).
 3. User-labeled ranking dataset and learned reranker: current ML relevance is TF-IDF, not a trained personalized model.
 4. Draft assistant and optional approved provider with user-controlled credentials.
 5. Permitted website application adapters with explicit user consent, visible review screen, per-source compliance checks, rate limits and audit trail.

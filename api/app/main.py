@@ -291,6 +291,11 @@ async def refresh():
                     f'• {j["title"]} — {j["company"]} ({j["score"]}%)\n{j["url"]}' for j in top
                 )
                 await send_telegram(client, msg)
+            from .features import queue_due_followups
+            reminders = queue_due_followups()
+            if reminders:
+                await send_telegram(client, "JobPilot — kontakt z rekruterem\\n" + "\\n".join(
+                    reminder["text"] + "\\n" + reminder["url"] for reminder in reminders[:5]))
             last_sync.update(at=now, error="; ".join(errors) if errors else None, count=len(ranked))
             return {"new_matches": len(new_matches), **last_sync}
 
