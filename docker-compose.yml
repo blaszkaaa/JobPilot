@@ -20,6 +20,10 @@ services:
       TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
     volumes:
       - jobpilot-data:/data
+    networks:
+      default:
+        aliases:
+          - jobpilot-internal-api
     expose:
       - "8000"
     healthcheck:
