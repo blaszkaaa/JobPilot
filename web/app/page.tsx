@@ -7,13 +7,14 @@ import {
   Clock3, ExternalLink, FileText, Filter, Globe2, LayoutDashboard, LoaderCircle,
   LockKeyhole, LogOut, MapPin, Menu, Radar, RefreshCcw, Search, Send,
   Settings2, ShieldCheck, SlidersHorizontal, Sparkles, Target, ThumbsUp, ThumbsDown, X,
-  PanelLeftClose, PanelLeftOpen, FolderKanban, Database, Server, Command, List, LayoutGrid, Keyboard, Terminal, ChevronUp, Plus
+  PanelLeftClose, PanelLeftOpen, FolderKanban, Database, Server, Command, List, LayoutGrid, Keyboard, Terminal, ChevronUp, Plus, FileSearch
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { SearchWatches, ApplicationBoard, CvUploader } from "./workspaces";
 import { SourcesWorkspace, ManualJobDialog } from "./source-workspace";
+import { CVAnalysisWorkspace } from "./cv-analysis-workspace";
 
-type Page = "dashboard" | "jobs" | "watches" | "sources" | "applications" | "notifications" | "settings";
+type Page = "dashboard" | "jobs" | "cv" | "watches" | "sources" | "applications" | "notifications" | "settings";
 type Job = {
   id: string; title: string; company: string; location: string; remote: boolean;
   description: string; url: string; source: string; posted_at: string;
@@ -36,6 +37,7 @@ const blankStats: Stats = { total: 0, matched: 0, saved: 0, applied: 0, telegram
 const menu: { page: Page; label: string; icon: LucideIcon }[] = [
   { page: "dashboard", label: "Przegląd", icon: LayoutDashboard },
   { page: "jobs", label: "Oferty pracy", icon: BriefcaseBusiness },
+  { page: "cv", label: "Analiza CV", icon: FileSearch },
   { page: "watches", label: "Wyszukiwania", icon: Radar },
   { page: "sources", label: "Źródła ofert", icon: Database },
   { page: "applications", label: "Moje aplikacje", icon: Send },
@@ -100,6 +102,7 @@ export default function Home() {
   const [scans, setScans] = useState<Scan[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [cvJobId, setCvJobId] = useState("");
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("all");
   const [remoteOnly, setRemoteOnly] = useState(false);
@@ -262,7 +265,7 @@ export default function Home() {
     <aside className={"sidebar " + (sidebarOpen ? "mobile-open" : "")}>
       <div className="brand">
         <div className="brand-icon"><Radar size={19} strokeWidth={2}/></div>
-        <span className="brand-name">JobPilot <small>v0.4</small></span>
+        <span className="brand-name">JobPilot <small>v0.6</small></span>
         <button className="icon-button sidebar-collapse-button" title={sidebarCollapsed ? "Rozwiń menu" : "Zwiń menu"} aria-label={sidebarCollapsed ? "Rozwiń menu" : "Zwiń menu"} onClick={toggleSidebar}>
           {sidebarCollapsed ? <PanelLeftOpen size={17}/> : <PanelLeftClose size={17}/>}
         </button>
@@ -430,11 +433,13 @@ export default function Home() {
             <div className="detail-actions"><a className="btn primary fill" href={chosen.url} target="_blank" rel="noopener noreferrer">Otwórz ofertę <ExternalLink size={15}/></a>
               <button disabled={busy === chosen.id} className="btn secondary fill" onClick={() => changeStatus(chosen, chosen.status === "saved" ? "new" : "saved")}><Bookmark size={15}/>{chosen.status === "saved" ? "Usuń z zapisanych" : "Zapisz ofertę"}</button>
               <button disabled={busy === "draft"} className="btn secondary fill" onClick={() => draft(chosen)}><FileText size={15}/> Kopiuj szkic wiadomości</button>
+              <button className="btn secondary fill" onClick={() => { setCvJobId(chosen.id); navigate("cv"); }}><FileSearch size={15}/> Analizuj moje CV</button>
               <button disabled={busy === "prepare"} className="btn secondary fill" onClick={() => void prepareApplication(chosen)}><FileText size={15}/> Przygotuj aplikację</button>
               {chosen.status !== "ignored" && <button disabled={busy === chosen.id} className="btn ghost fill" onClick={() => changeStatus(chosen, "ignored")}><X size={15}/> Odrzuć ofertę</button>}
             </div>
           </> : <div className="detail-placeholder"><div className="placeholder-icon"><BriefcaseBusiness size={28}/></div><h3>Wybierz ofertę</h3><p>Kliknij ogłoszenie z listy, aby zobaczyć szczegóły, dopasowanie i dostępne działania.</p></div>}</section></div>
         </>}
+        {page === "cv" && <CVAnalysisWorkspace jobs={jobs} initialJobId={cvJobId} onOpenJob={openSearchJob} onEditCv={() => navigate("settings")} onMessage={setToast}/>}
         {page === "watches" && <SearchWatches sources={stats.sources} onMessage={setToast} onError={setError}/>}
         {page === "sources" && <SourcesWorkspace onMessage={setToast} onError={setError} onChanged={load}/>}
         {page === "applications" && <ApplicationBoard onMessage={setToast} onError={setError} onChanged={load}/>}

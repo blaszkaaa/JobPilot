@@ -3,6 +3,7 @@ import "./globals.css";
 import "./workspaces.css";
 import "./dokploy.css";
 import "./source-workspace.css";
+import "./cv-analysis-workspace.css";
 
 export const metadata: Metadata = {
   title: "JobPilot — Job Discovery Platform",

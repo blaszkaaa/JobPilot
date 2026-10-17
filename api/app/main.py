@@ -320,7 +320,7 @@ async def lifespan(app: FastAPI):
         except asyncio.CancelledError:
             pass
 
-app = FastAPI(title="JobPilot", version="0.2.0", lifespan=lifespan, docs_url=None, redoc_url=None)
+app = FastAPI(title="JobPilot", version="0.6.0", lifespan=lifespan, docs_url=None, redoc_url=None)
 
 @app.get("/health")
 def health():
@@ -465,3 +465,6 @@ from .learning import router as learning_router
 app.include_router(learning_router)
 from .sources import router as sources_router
 app.include_router(sources_router)
+
+from .cv_analysis import router as cv_analysis_router
+app.include_router(cv_analysis_router)

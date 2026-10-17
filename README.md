@@ -2,6 +2,18 @@
 
 **Open-source job discovery, semantic matching, notifications and application tracking.** A self-hosted, single-owner portfolio project with a dark dashboard inspired by Dokploy.
 
+## Release v0.6 — CV vs. job analysis
+
+A new **Analiza CV** workspace compares the text of the self-hosted resume against technologies named in individual job listings. Open it from the navigation or use **Analizuj moje CV** while viewing a job.
+
+- Local, explainable matching for a curated set of technical competencies (Python, FastAPI, SQL, Docker, Git, RPA, UiPath, AI/ML, cloud technologies and more).
+- **Potwierdzone w CV**: matched technology names with bounded quotations of the exact passages found in the CV and job description.
+- **Niepotwierdzone w CV**: technologies named in the posting but not detected in CV text, each linked to a supporting excerpt. **This does not prove the candidate lacks the skill.**
+- Shows a **coverage of detected technology mentions**, never a probability of being hired.
+- Empty-CV and nontechnical-job states, search among imported jobs, quick jump to the original listing, copy a text report.
+- Runs entirely on the user's server: no external AI, no job-board requests from the analysis feature. Requires the owner login.
+- The current method identifies explicit technology references. It does not reliably extract all qualifications, assess skill levels, or infer soft skills. Use it as a CV editing aid rather than an applicant evaluation system.
+
 ## Release v0.5 — Manage ATS sources and add jobs manually
 
 - **Źródła ofert** section: add, pause, resume and remove employer job boards via the UI, backed by SQLite. Supports `Greenhouse` and `Lever` company board slugs, with strict validation and a cap of 20 managed sources. Environment variable boards remain enabled and read-only in the panel.
