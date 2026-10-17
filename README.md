@@ -2,6 +2,14 @@
 
 **Open-source job discovery, semantic matching, notifications and application tracking.** A self-hosted, single-owner portfolio project with a dark dashboard inspired by Dokploy.
 
+## Release v0.3 — feedback-driven matching and reliable inbox
+
+- Click **Pasuje** / **Nie pasuje** on a listing. Explicit like/dislike feedback is stored in SQLite and immediately reranks other listings using TF-IDF content similarity to examples. This is a **simple content-based adaptive ML ranking**, not an LLM, a fine-tuned model, or probability of getting hired. Undo a vote by clicking it again.
+- Learn from individual votes, without making negative assumptions about ignored/saved items.
+- **History of scans** (up to 500 records retained), with fetched counts, new matches and provider errors.
+- **Inbox read/unread state**, individual marking and mark-all, unread badges.
+- Deploy to Dokploy as before; schema migrations preserve existing listings, applications, and user profile.
+
 ## Release v0.2 — search watchers & application workspace\n\nThis version extends the first MVP with managed search queries, PDF CV parsing, and a full application pipeline. No third-party recruiter sites are automated or posted to by JobPilot.\n\n## Working MVP
 
 - Private owner login (HTTP-only signed cookie, no public registration).
@@ -43,7 +51,7 @@ To access the web service locally, use `docker compose -f docker-compose.yml -f 
 
 ```
 web/             Next.js app, Polish UI, proxy /api → api service
-api/app/main.py  FastAPI, auth, matching, fetchers, background sync\napi/app/features.py  Search-watch CRUD, applications pipeline, migration, PDF import, CSV export\nweb/app/workspaces.tsx  UI for watch lists, pipeline, CV importer
+api/app/main.py  FastAPI, auth, matching, fetchers, background sync\napi/app/features.py  Search-watch CRUD, applications pipeline, migration, PDF import, CSV export\napi/app/intelligence.py  TF-IDF matching, explicit vote similarity, ranking reasons\napi/app/learning.py  User feedback API, scan history, inbox read/unread\nweb/app/workspaces.tsx  UI for watch lists, pipeline, CV importer
 api/tests/       Matching and API tests
 docker-compose.yml
 ```
@@ -63,11 +71,11 @@ This is a **real MVP**, not a production multi-tenant SaaS. One owner per deploy
 Upcoming features:
 1. Better deduplication and location parsing (currently deduplication by provider ID).
 2. Per-company boards configuration from UI, real notification preferences, scheduled job queues and configurable follow-up reminders (currently queued on each scan and optionally delivered through Telegram; no instant scheduler).
-3. User-labeled ranking dataset and learned reranker: current ML relevance is TF-IDF, not a trained personalized model.
+3. Exportable user-labeled ranking dataset and supervised reranker: current adaptive relevance is TF-IDF with explicit feedback similarity, not a trained supervised neural model.
 4. Draft assistant and optional approved provider with user-controlled credentials.
 5. Permitted website application adapters with explicit user consent, visible review screen, per-source compliance checks, rate limits and audit trail.
 
-**JobPilot does not submit job applications automatically in v0.2.** Only the user can confirm that an application was sent.
+**JobPilot does not submit job applications automatically in v0.3.** Only the user can confirm that an application was sent.
 
 ## Security notes
 
@@ -90,3 +98,5 @@ MIT License.
 4. Advance the stage as the hiring process progresses. Use **Eksport CSV** for a local backup of your pipeline.
 
 Search watches consume Adzuna API quota: with five enabled queries and 30-minute polls, this release can issue up to 240 Adzuna searches per day (not counting manual scans). Configure fewer watches or increase `SYNC_INTERVAL_SECONDS` to fit your plan.
+
+### Adaptive matching scores\n\nA liked or disliked listing becomes a labelled example (kept locally). For each other job, its TF-IDF vector is compared to liked/disliked examples. Similarity can adjust the original profile-fit score by up to +22 points or −27 points. Saved jobs do **not** count as positive feedback automatically. All content-based adjustments can be cleared by undoing votes. This is a heuristic ranking scale between 0–100, not a calibrated probability of interviews or hiring.\n

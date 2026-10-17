@@ -120,40 +120,10 @@ def authenticated(request: Request):
         raise HTTPException(401, "Sesja wygasła")
     return True
 
-def rank(jobs, profile):
-    """TF-IDF ML similarity + interpretable user preferences (not an LLM)."""
-    if not jobs:
-        return []
-    terms = split_terms(profile["keywords"])
-    banned = split_terms(profile["excluded"])
-    reference = (profile["cv_text"] + " " + " ".join(terms * 3)).strip()
-    documents = [reference or "Python development"] + [
-        f'{j["title"]} {j["title"]} {j["description"][:3000]}' for j in jobs
-    ]
-    try:
-        matrix = TfidfVectorizer(ngram_range=(1, 2), max_features=7000, sublinear_tf=True).fit_transform(documents)
-        similarities = cosine_similarity(matrix[0:1], matrix[1:]).flatten()
-    except ValueError:
-        similarities = [0] * len(jobs)
-    results = []
-    for job, similarity in zip(jobs, similarities):
-        blob = f'{job["title"]} {job["description"]}'.lower()
-        matched = [term for term in terms if term in blob]
-        keyword_ratio = len(matched) / max(1, len(terms))
-        location = profile["location"].strip().lower()
-        location_match = bool(location and (location in job["location"].lower() or location in blob[:400]))
-        remote = bool(job["remote"])
-        score = round(65 * min(1.0, float(similarity) * 2.4) + 25 * keyword_ratio + 10 * (remote or location_match))
-        if not terms and not profile["cv_text"]:
-            score = 0
-        if any(term in blob for term in banned):
-            score = 0
-        if profile["remote_only"] and not remote:
-            score = 0
-        score = max(0, min(100, score))
-        reason = ("Pasuje: " + ", ".join(matched[:4])) if matched else "Dopasowanie na podstawie opisu stanowiska"
-        results.append({**job, "score": score, "reason": reason})
-    return results
+def rank(jobs, profile, feedback=None):
+    from .intelligence import rank as calculate_rank
+    return calculate_rank(jobs, profile, feedback)
+
 
 def greenhouse_job(item, board):
     location = (item.get("location") or {}).get("name") or "Nie podano"
@@ -263,7 +233,8 @@ async def refresh():
     async with sync_lock:
         async with httpx.AsyncClient(timeout=20, follow_redirects=False) as client:
             records, errors = await fetch_jobs(client)
-            ranked = rank(records, profile_dict())
+            from .learning import examples
+            ranked = rank(records, profile_dict(), examples())
             now = current_utc()
             new_matches = []
             with connection() as db:
@@ -296,6 +267,12 @@ async def refresh():
             if reminders:
                 await send_telegram(client, "JobPilot — kontakt z rekruterem\n" + "\n".join(
                     reminder["text"] + "\n" + reminder["url"] for reminder in reminders[:5]))
+            with connection() as db:
+                db.execute(
+                    "INSERT INTO scan_history(scanned_at,fetched,new_matches,errors) VALUES (?,?,?,?)",
+                    (now, len(ranked), len(new_matches), "; ".join(errors) or None))
+                db.execute("DELETE FROM scan_history WHERE id NOT IN (SELECT id FROM scan_history ORDER BY id DESC LIMIT 500)")
+                db.commit()
             last_sync.update(at=now, error="; ".join(errors) if errors else None, count=len(ranked))
             return {"new_matches": len(new_matches), **last_sync}
 
@@ -368,10 +345,8 @@ def set_profile(body: Profile, _=Depends(authenticated)):
             cv_text=?,remote_only=?,min_score=? WHERE id=1""",
             (body.full_name,body.location,body.keywords,body.excluded,body.cv_text,
              int(body.remote_only),body.min_score))
-        existing = [dict(j) for j in db.execute("SELECT * FROM jobs").fetchall()]
-        for job in rank(existing, body.model_dump()):
-            db.execute("UPDATE jobs SET score=?,reason=? WHERE id=?",
-                       (job["score"], job["reason"], job["id"]))
+        from .learning import recompute
+        recompute(db, body.model_dump())
         db.commit()
     return {"ok": True}
 
@@ -383,15 +358,21 @@ def stats(_=Depends(authenticated)):
                              (profile_dict()["min_score"],)).fetchone()[0]
         saved = db.execute("SELECT count(*) FROM jobs WHERE status='saved'").fetchone()[0]
         applied = db.execute("SELECT count(*) FROM applications WHERE status IN ('applied','interview','offer','rejected')").fetchone()[0]
+        likes = db.execute("SELECT count(*) FROM job_feedback WHERE opinion=1").fetchone()[0]
+        dislikes = db.execute("SELECT count(*) FROM job_feedback WHERE opinion=-1").fetchone()[0]
+        unread = db.execute("SELECT count(*) FROM notifications WHERE read_at IS NULL").fetchone()[0]
     return {"total": total, "matched": matched, "saved": saved, "applied": applied,
-            "last_sync": last_sync, "telegram": bool(TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID),
+            "last_sync": last_sync, "likes": likes, "dislikes": dislikes,
+            "unread": unread, "telegram": bool(TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID),
             "sources": ["Arbeitnow"] + (["Greenhouse"] if GREENHOUSE_BOARDS else []) +
             (["Lever"] if LEVER_SITES else []) +
             (["Adzuna"] if ADZUNA_APP_ID and ADZUNA_APP_KEY else [])}
 
 @app.get("/api/jobs")
 def list_jobs(q: str = "", status: str = "all", remote: bool = False, _=Depends(authenticated)):
-    sql = "SELECT * FROM jobs WHERE 1=1"
+    sql = """SELECT jobs.*, COALESCE(
+        (SELECT opinion FROM job_feedback f WHERE f.job_id = jobs.id),0
+    ) AS feedback FROM jobs WHERE 1=1"""
     args = []
     if status != "all":
         if status not in {"new", "saved", "ignored", "applied"}:
@@ -432,7 +413,7 @@ def change_status(job_id: str, body: StatusChange, _=Depends(authenticated)):
 @app.get("/api/notifications")
 def notifications(_=Depends(authenticated)):
     with connection() as db:
-        return [dict(r) for r in db.execute("SELECT * FROM notifications ORDER BY id DESC LIMIT 30")]
+        return [dict(r) for r in db.execute("SELECT * FROM notifications ORDER BY id DESC LIMIT 60")]
 
 @app.get("/api/applications")
 def applications(_=Depends(authenticated)):
@@ -459,3 +440,5 @@ def draft(job_id: str, _=Depends(authenticated)):
 # The optional search rules, application pipeline and PDF import are in a separate module.
 from .features import router as workspace_router
 app.include_router(workspace_router)
+from .learning import router as learning_router
+app.include_router(learning_router)

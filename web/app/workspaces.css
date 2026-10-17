@@ -78,3 +78,31 @@
   .watch-item { gap: 8px; padding: 14px 12px; }
   .watch-actions { gap: 2px; }
 }
+
+/* Feedback-driven matching, notification inbox and scan history */
+.feedback-controls { margin: -8px 0 25px; background: #191b22; border: 1px solid #313440; border-radius: 9px; padding: 15px; }
+.feedback-controls strong { font-size: 12px; display: block; }
+.feedback-controls p { color: #989aa9; margin: 5px 0 14px; font-size: 10.5px; line-height: 1.6; }
+.feedback-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+.feedback-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid #41434d; border-radius: 7px; min-height: 35px; color: #bdbec9; background: #272933; padding: 8px 12px; font-size: 11px; font-weight: 700; flex: 1; }
+.feedback-button:hover { border-color: #777484; color: #f1ecf9; }
+.feedback-button.chosen.good { border-color: #3e755b; background: #1f3a30; color: #82ddb2; }
+.feedback-button.chosen.bad { border-color: #784747; background: #3a2528; color: #f8a9a9; }
+.scan-timeline-title { margin: 19px 18px 5px; display: flex; align-items: center; gap: 7px; color: #cbcad8; font-weight: 700; font-size: 11px; }
+.scan-line { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 18px; border-bottom: 1px solid #2b2d35; padding: 11px 0; }
+.scan-line:last-child { border-bottom: 0; }
+.scan-line > div { display: grid; gap: 5px; min-width: 0; }
+.scan-line strong { font-size: 10.5px; }
+.scan-line small { color: #8f909c; font-size: 10px; line-height: 1.4; }
+.scan-state { text-transform: uppercase; font-size: 9px; font-weight: 800; border-radius: 5px; padding: 4px 6px; }
+.scan-state.good { background: #22392d; color: #8adab0; }
+.scan-state.warning { background: #47342a; color: #eab682; }
+.scan-empty { font-size: 10.5px; color: #8e91a0; margin: 14px 18px 8px; }
+.notice-actions { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.notice-read { white-space: nowrap; margin-left: auto; font-size: 10.5px; min-height: 31px; }
+.event-content { min-width: 0; flex: 1; }
+.event-row.event-unread { background: #1d1d29; }
+.event-unread .event-icon { color: #d1c5ff; background: #342d50; }
+.inbox-button { position: relative; }
+.inbox-badge { position: absolute; background: #917eff; color: #181320; border-radius: 9px; top: -5px; right: -6px; font-weight: 800; font-size: 9px; padding: 1px 4px; min-width: 16px; text-align: center; }
+@media(max-width:760px) { .event-row { flex-wrap: wrap; } .notice-read { flex-basis: auto; } .notice-actions { justify-content: flex-end; gap: 8px; } }

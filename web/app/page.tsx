@@ -6,7 +6,7 @@ import {
   BriefcaseBusiness, Check, CheckCircle2, ChevronDown, ChevronRight, CircleHelp,
   Clock3, ExternalLink, FileText, Filter, Globe2, LayoutDashboard, LoaderCircle,
   LockKeyhole, LogOut, MapPin, Menu, Radar, RefreshCcw, Search, Send,
-  Settings2, ShieldCheck, SlidersHorizontal, Sparkles, Target, X
+  Settings2, ShieldCheck, SlidersHorizontal, Sparkles, Target, ThumbsUp, ThumbsDown, X
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { SearchWatches, ApplicationBoard, CvUploader } from "./workspaces";
@@ -15,7 +15,7 @@ type Page = "dashboard" | "jobs" | "watches" | "applications" | "notifications" 
 type Job = {
   id: string; title: string; company: string; location: string; remote: boolean;
   description: string; url: string; source: string; posted_at: string;
-  score: number; reason: string; discovered_at: string; status: string;
+  score: number; reason: string; discovered_at: string; status: string; feedback: number;
 };
 type Profile = {
   full_name: string; location: string; keywords: string; excluded: string;
@@ -23,13 +23,14 @@ type Profile = {
 };
 type Stats = {
   total: number; matched: number; saved: number; applied: number;
-  telegram: boolean; sources: string[];
+  telegram: boolean; sources: string[]; likes: number; dislikes: number; unread: number;
   last_sync: { at: string | null; error: string | null; count: number };
 };
-type Notice = { id: number; message: string; created_at: string };
+type Notice = { id: number; message: string; created_at: string; read_at: string | null };
+type Scan = { id: number; scanned_at: string; fetched: number; new_matches: number; errors: string | null };
 type Application = { id: number; title: string; company: string; url: string; created_at: string; status: string };
 const blankProfile: Profile = { full_name: "", location: "Polska", keywords: "", excluded: "", cv_text: "", remote_only: false, min_score: 60 };
-const blankStats: Stats = { total: 0, matched: 0, saved: 0, applied: 0, telegram: false, sources: [], last_sync: { at: null, error: null, count: 0 } };
+const blankStats: Stats = { total: 0, matched: 0, saved: 0, applied: 0, telegram: false, sources: [], likes: 0, dislikes: 0, unread: 0, last_sync: { at: null, error: null, count: 0 } };
 const menu: { page: Page; label: string; icon: LucideIcon }[] = [
   { page: "dashboard", label: "Przegląd", icon: LayoutDashboard },
   { page: "jobs", label: "Oferty pracy", icon: BriefcaseBusiness },
@@ -93,6 +94,7 @@ export default function Home() {
   const [profile, setProfile] = useState<Profile>(blankProfile);
   const [stats, setStats] = useState<Stats>(blankStats);
   const [notices, setNotices] = useState<Notice[]>([]);
+  const [scans, setScans] = useState<Scan[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
@@ -113,12 +115,13 @@ export default function Home() {
 
   async function load() {
     try {
-      const [loadedJobs, loadedProfile, loadedStats, loadedNotices, loadedApplications] = await Promise.all([
+      const [loadedJobs, loadedProfile, loadedStats, loadedNotices, loadedApplications, loadedScans] = await Promise.all([
         api<Job[]>("/api/jobs"), api<Profile>("/api/profile"), api<Stats>("/api/stats"),
-        api<Notice[]>("/api/notifications"), api<Application[]>("/api/applications")
+        api<Notice[]>("/api/notifications"), api<Application[]>("/api/applications"),
+        api<Scan[]>("/api/scans")
       ]);
       setJobs(loadedJobs); setProfile(loadedProfile); setStats(loadedStats);
-      setNotices(loadedNotices); setApplications(loadedApplications);
+      setNotices(loadedNotices); setApplications(loadedApplications); setScans(loadedScans);
     } catch (err) { setError((err as Error).message); }
   }
   async function checkAuth() {
@@ -158,6 +161,34 @@ export default function Home() {
     finally { setBusy(""); }
   }
 
+  async function giveFeedback(job: Job, opinion: "like" | "dislike" | "clear") {
+    setBusy("rating");
+    try {
+      await api("/api/jobs/" + encodeURIComponent(job.id) + "/feedback", {
+        method: "POST", body: JSON.stringify({ opinion })
+      });
+      await load();
+      setToast(opinion === "clear"
+        ? "Ocena usunięta"
+        : "Zapisano ocenę — dopasowanie zostało przeliczone");
+    } catch (err) { setError((err as Error).message); }
+    finally { setBusy(""); }
+  }
+
+  async function markNotification(id: number) {
+    try {
+      await api("/api/notifications/" + id + "/read", { method: "PATCH" });
+      await load();
+    } catch (err) { setError((err as Error).message); }
+  }
+
+  async function markAllNotifications() {
+    try {
+      await api("/api/notifications/read-all", { method: "POST" });
+      await load(); setToast("Wszystkie powiadomienia oznaczone jako przeczytane");
+    } catch (err) { setError((err as Error).message); }
+  }
+
   async function saveProfile() {
     setBusy("profile");
     try {
@@ -188,7 +219,7 @@ export default function Home() {
       <div className="workspace"><div className="workspace-avatar">J</div><div className="workspace-text"><strong>My Workspace</strong><small>Personal instance</small></div><ChevronDown size={15}/></div>
       <div className="nav-caption">WORKSPACE</div>
       <nav>{menu.map(item => <button key={item.page} className={"nav-item " + (page === item.page ? "active" : "")} onClick={() => navigate(item.page)}>
-        <item.icon size={17}/><span>{item.label}</span>{item.page === "notifications" && notices.length > 0 && <span className="nav-count">{notices.length}</span>}
+        <item.icon size={17}/><span>{item.label}</span>{item.page === "notifications" && stats.unread > 0 && <span className="nav-count">{stats.unread}</span>}
       </button>)}</nav>
       <div className="sidebar-bottom">
         <div className="sync-card"><div className="sync-title"><span className="pulse-dot"/> System aktywny</div><p>Automatyczne wyszukiwanie co 30 minut.</p><div className="sync-time"><Clock3 size={13}/> {shortDate(stats.last_sync.at)}</div></div>
@@ -201,7 +232,7 @@ export default function Home() {
         <div className="top-left"><button className="icon-button mobile-toggle" onClick={() => setSidebarOpen(true)} aria-label="Otwórz menu"><Menu size={20}/></button>
           <span className="breadcrumb">Workspace</span><ChevronRight size={14} className="muted"/><span className="breadcrumb-current">{menu.find(m => m.page === page)?.label}</span>
         </div>
-        <div className="top-actions"><span className="top-status"><span className="pulse-dot"/> Monitoring aktywny</span><button className="icon-button" onClick={() => navigate("notifications")} aria-label="Powiadomienia"><Bell size={18}/></button><div className="top-avatar">{getInitials(email)}</div></div>
+        <div className="top-actions"><span className="top-status"><span className="pulse-dot"/> Monitoring aktywny</span><button className="icon-button inbox-button" onClick={() => navigate("notifications")} aria-label={"Powiadomienia, nieprzeczytane: " + stats.unread}><Bell size={18}/>{stats.unread > 0 && <span className="inbox-badge">{stats.unread > 99 ? "99+" : stats.unread}</span>}</button><div className="top-avatar">{getInitials(email)}</div></div>
       </header>
       <main className="content">
         {error && <div className="notice-error"><CircleHelp size={17}/>{error}<button onClick={() => setError("")} aria-label="Zamknij błąd"><X size={15}/></button></div>}
@@ -212,7 +243,7 @@ export default function Home() {
           <div className="stats-grid">
             <StatCard label="Znalezione oferty" value={stats.total} icon={BriefcaseBusiness} sub="Wszystkie źródła"/>
             <StatCard label="Dopasowane" value={stats.matched} icon={Target} sub={"Wynik ≥ " + profile.min_score + "%"} accent/>
-            <StatCard label="Zapisane" value={stats.saved} icon={Bookmark} sub="Do przejrzenia"/>
+            <StatCard label="Zapisane" value={stats.saved} icon={Bookmark} sub={"Oceny: " + stats.likes + " lubię / " + stats.dislikes + " nie interesuje"}/>
             <StatCard label="Aplikacje" value={stats.applied} icon={Send} sub="Wysłane i w rekrutacji"/>
           </div>
           <div className="dashboard-grid">
@@ -226,6 +257,11 @@ export default function Home() {
                 <div className="info-line"><span>Ostatni skan</span><strong>{shortDate(stats.last_sync.at)}</strong></div>
                 <div className="info-line"><span>Przejrzane oferty</span><strong>{stats.last_sync.count}</strong></div>
                 <div className="info-line"><span>Źródła</span><strong>{stats.sources.join(", ") || "Brak"}</strong></div>
+                <div className="scan-timeline-title"><Activity size={14}/> Ostatnie skanowania</div>
+                {scans.length ? scans.slice(0, 4).map(scan => <div className="scan-line" key={scan.id}>
+                  <div><strong>{shortDate(scan.scanned_at)}</strong><small>{scan.fetched} pobranych · {scan.new_matches} nowych dopasowań</small></div>
+                  <span className={"scan-state " + (scan.errors ? "warning" : "good")}>{scan.errors ? "Błędy" : "OK"}</span>
+                </div>) : <p className="scan-empty">Historia pojawi się po pierwszym skanowaniu.</p>}
                 {stats.last_sync.error && <div className="inline-warning">{stats.last_sync.error}</div>}
               </section>
               <section className="panel small-panel"><div className="panel-header"><div><h2><BrainCircuit size={18}/> Matching Engine</h2><p>TF-IDF + reguły preferencji</p></div><span className="tag purple">LOCAL ML</span></div>
@@ -252,6 +288,17 @@ export default function Home() {
             <h2>{chosen.title}</h2><div className="company-name">{chosen.company}</div>
             <div className="chips"><span><MapPin size={13}/>{chosen.location}</span>{chosen.remote && <span>Remote</span>}<span>{formatSource(chosen)}</span></div>
             <div className="detail-score"><div><small>Wskaźnik dopasowania (szacunkowy)</small><strong>{chosen.score}%</strong></div><div className="bar"><span style={{ width: chosen.score + "%" }}/></div><p>{chosen.reason}</p></div>
+            <div className="feedback-controls">
+              <div><strong>Czy oferta Ci odpowiada?</strong><p>Twoje oceny pomogą dopasować kolejne wyniki.</p></div>
+              <div className="feedback-buttons">
+                <button disabled={busy === "rating"} className={"feedback-button " + (chosen.feedback === 1 ? "chosen good" : "")}
+                  onClick={() => void giveFeedback(chosen, chosen.feedback === 1 ? "clear" : "like")}
+                  title="Pokaż podobne oferty"><ThumbsUp size={16}/> Pasuje</button>
+                <button disabled={busy === "rating"} className={"feedback-button " + (chosen.feedback === -1 ? "chosen bad" : "")}
+                  onClick={() => void giveFeedback(chosen, chosen.feedback === -1 ? "clear" : "dislike")}
+                  title="Pokazuj mniej takich ofert"><ThumbsDown size={16}/> Nie pasuje</button>
+              </div>
+            </div>
             <h3>Opis stanowiska</h3><p className="job-description">{chosen.description || "Opis niedostępny — przejdź do ogłoszenia źródłowego."}</p>
             <div className="detail-actions"><a className="btn primary fill" href={chosen.url} target="_blank" rel="noopener noreferrer">Otwórz ofertę <ExternalLink size={15}/></a>
               <button disabled={busy === chosen.id} className="btn secondary fill" onClick={() => changeStatus(chosen, chosen.status === "saved" ? "new" : "saved")}><Bookmark size={15}/>{chosen.status === "saved" ? "Usuń z zapisanych" : "Zapisz ofertę"}</button>
@@ -265,8 +312,18 @@ export default function Home() {
         {page === "applications" && <ApplicationBoard onMessage={setToast} onError={setError} onChanged={load}/>}
 
         {page === "notifications" && <><PageHeading eyebrow="ALERT CENTER" icon={Bell} title="Powiadomienia" desc="Nowe dopasowane oferty i przypomnienia o kontakcie z rekruterem."/>
-          <section className="panel data-panel"><div className="panel-bar"><strong>Ostatnie zdarzenia</strong><span>Telegram: {stats.telegram ? "skonfigurowany" : "niepołączony"}</span></div>
-            {notices.length ? notices.map(n => <div key={n.id} className="event-row"><div className="event-icon"><Bell size={17}/></div><div><strong>{n.message}</strong><small>{shortDate(n.created_at)}</small></div></div>) : <Empty icon={Bell} title="Brak powiadomień" message="Nowe oferty spełniające Twój próg dopasowania pojawią się tutaj."/>}</section>
+          <section className="panel data-panel"><div className="panel-bar">
+            <strong>Powiadomienia · {stats.unread} nieprzeczytanych</strong>
+            <div className="notice-actions">
+              <span>Telegram: {stats.telegram ? "skonfigurowany" : "niepołączony"}</span>
+              <button className="text-button" disabled={!stats.unread} onClick={() => void markAllNotifications()}><Check size={14}/> Oznacz wszystkie</button>
+            </div>
+          </div>
+            {notices.length ? notices.map(n => <div key={n.id} className={"event-row " + (n.read_at ? "" : "event-unread")}>
+              <div className="event-icon"><Bell size={17}/></div>
+              <div className="event-content"><strong>{n.message}</strong><small>{shortDate(n.created_at)}</small></div>
+              {!n.read_at && <button className="btn secondary notice-read" onClick={() => void markNotification(n.id)}><Check size={14}/> Przeczytane</button>}
+            </div>) : <Empty icon={Bell} title="Brak powiadomień" message="Nowe oferty spełniające Twój próg dopasowania pojawią się tutaj."/>}</section>
         </>}
         {page === "settings" && <><PageHeading eyebrow="WORKSPACE CONFIGURATION" icon={SlidersHorizontal} title="Ustawienia" desc="Dopasuj profil zawodowy i zasady działania wyszukiwarki."/>
           <div className="settings-grid"><section className="panel settings-panel"><div className="panel-header"><div><h2><Target size={18}/> Preferencje zawodowe</h2><p>Używane do obliczania rankingu dopasowania</p></div></div>

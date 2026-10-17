@@ -60,6 +60,18 @@ def initialize_features():
         db.execute("""CREATE TABLE IF NOT EXISTS reminder_delivery (
             reminder_key TEXT PRIMARY KEY, created_at TEXT NOT NULL
         )""")
+        db.execute("""CREATE TABLE IF NOT EXISTS job_feedback (
+            job_id TEXT PRIMARY KEY, opinion INTEGER NOT NULL CHECK(opinion IN (-1,1)),
+            updated_at TEXT NOT NULL, FOREIGN KEY(job_id) REFERENCES jobs(id)
+        )""")
+        db.execute("""CREATE TABLE IF NOT EXISTS scan_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            scanned_at TEXT NOT NULL, fetched INTEGER NOT NULL,
+            new_matches INTEGER NOT NULL, errors TEXT
+        )""")
+        notification_cols = {row["name"] for row in db.execute("PRAGMA table_info(notifications)")}
+        if "read_at" not in notification_cols:
+            db.execute("ALTER TABLE notifications ADD COLUMN read_at TEXT")
         db.execute("UPDATE applications SET status='applied' WHERE status='manual'")
         db.execute("UPDATE applications SET updated_at=created_at WHERE updated_at IS NULL")
         db.commit()
