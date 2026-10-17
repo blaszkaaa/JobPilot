@@ -9,8 +9,9 @@ import {
   Settings2, ShieldCheck, SlidersHorizontal, Sparkles, Target, X
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { SearchWatches, ApplicationBoard, CvUploader } from "./workspaces";
 
-type Page = "dashboard" | "jobs" | "applications" | "notifications" | "settings";
+type Page = "dashboard" | "jobs" | "watches" | "applications" | "notifications" | "settings";
 type Job = {
   id: string; title: string; company: string; location: string; remote: boolean;
   description: string; url: string; source: string; posted_at: string;
@@ -32,6 +33,7 @@ const blankStats: Stats = { total: 0, matched: 0, saved: 0, applied: 0, telegram
 const menu: { page: Page; label: string; icon: LucideIcon }[] = [
   { page: "dashboard", label: "Przegląd", icon: LayoutDashboard },
   { page: "jobs", label: "Oferty pracy", icon: BriefcaseBusiness },
+  { page: "watches", label: "Wyszukiwania", icon: Radar },
   { page: "applications", label: "Moje aplikacje", icon: Send },
   { page: "notifications", label: "Powiadomienia", icon: Bell },
   { page: "settings", label: "Ustawienia", icon: Settings2 }
@@ -143,6 +145,19 @@ export default function Home() {
       await load(); setToast(next === "saved" ? "Oferta zapisana" : next === "applied" ? "Aplikacja dodana do historii" : "Status zaktualizowany");
     } catch (err) { setError((err as Error).message); } finally { setBusy(""); }
   }
+  async function prepareApplication(job: Job) {
+    setBusy("prepare");
+    try {
+      const result = await api<{ created: boolean }>("/api/applications/prepare", {
+        method: "POST", body: JSON.stringify({ job_id: job.id })
+      });
+      await load();
+      navigate("applications");
+      setToast(result.created ? "Utworzono szkic aplikacji — sprawdź go przed wysłaniem" : "Otwórz istniejącą aplikację w pipeline");
+    } catch (err) { setError((err as Error).message); }
+    finally { setBusy(""); }
+  }
+
   async function saveProfile() {
     setBusy("profile");
     try {
@@ -198,11 +213,11 @@ export default function Home() {
             <StatCard label="Znalezione oferty" value={stats.total} icon={BriefcaseBusiness} sub="Wszystkie źródła"/>
             <StatCard label="Dopasowane" value={stats.matched} icon={Target} sub={"Wynik ≥ " + profile.min_score + "%"} accent/>
             <StatCard label="Zapisane" value={stats.saved} icon={Bookmark} sub="Do przejrzenia"/>
-            <StatCard label="Aplikacje" value={stats.applied} icon={Send} sub="Potwierdzone ręcznie"/>
+            <StatCard label="Aplikacje" value={stats.applied} icon={Send} sub="Wysłane i w rekrutacji"/>
           </div>
           <div className="dashboard-grid">
             <section className="panel recommendations">
-              <div className="panel-header"><div><h2><Sparkles size={18}/> Najlepsze dopasowania</h2><p>Oferty uszeregowane przez silnik ML</p></div><button className="text-button" onClick={() => navigate("jobs")}>Wszystkie oferty <ArrowRight size={15}/></button></div>
+              <div className="panel-header"><div><h2><Sparkles size={18}/> Najlepsze dopasowania</h2><p>Ranking semantyczny i preferencje (nie szansa zatrudnienia)</p></div><button className="text-button" onClick={() => navigate("jobs")}>Wszystkie oferty <ArrowRight size={15}/></button></div>
               {recommended.length ? <div className="list-jobs">{recommended.map(job => <JobRow key={job.id} job={job} onClick={() => { navigate("jobs"); setSelectedId(job.id); }}/>)}</div> :
               <Empty icon={Radar} title="Czekamy na pierwsze oferty" message="Uruchom skanowanie i uzupełnij preferencje, aby otrzymać dopasowania."/>}
             </section>
@@ -236,20 +251,19 @@ export default function Home() {
             <div className="detail-top"><div className="company-logo big">{getInitials(chosen.company)}</div><button className="icon-button" title="Zamknij szczegóły" onClick={() => setSelectedId(null)}><X size={18}/></button></div>
             <h2>{chosen.title}</h2><div className="company-name">{chosen.company}</div>
             <div className="chips"><span><MapPin size={13}/>{chosen.location}</span>{chosen.remote && <span>Remote</span>}<span>{formatSource(chosen)}</span></div>
-            <div className="detail-score"><div><small>Wskaźnik dopasowania</small><strong>{chosen.score}%</strong></div><div className="bar"><span style={{ width: chosen.score + "%" }}/></div><p>{chosen.reason}</p></div>
+            <div className="detail-score"><div><small>Wskaźnik dopasowania (szacunkowy)</small><strong>{chosen.score}%</strong></div><div className="bar"><span style={{ width: chosen.score + "%" }}/></div><p>{chosen.reason}</p></div>
             <h3>Opis stanowiska</h3><p className="job-description">{chosen.description || "Opis niedostępny — przejdź do ogłoszenia źródłowego."}</p>
             <div className="detail-actions"><a className="btn primary fill" href={chosen.url} target="_blank" rel="noopener noreferrer">Otwórz ofertę <ExternalLink size={15}/></a>
               <button disabled={busy === chosen.id} className="btn secondary fill" onClick={() => changeStatus(chosen, chosen.status === "saved" ? "new" : "saved")}><Bookmark size={15}/>{chosen.status === "saved" ? "Usuń z zapisanych" : "Zapisz ofertę"}</button>
               <button disabled={busy === "draft"} className="btn secondary fill" onClick={() => draft(chosen)}><FileText size={15}/> Kopiuj szkic wiadomości</button>
-              {chosen.status !== "applied" && <button disabled={busy === chosen.id} className="btn ghost fill" onClick={() => changeStatus(chosen, "applied")}><Check size={15}/> Oznacz jako aplikowano</button>}
+              <button disabled={busy === "prepare"} className="btn secondary fill" onClick={() => void prepareApplication(chosen)}><FileText size={15}/> Przygotuj aplikację</button>
               {chosen.status !== "ignored" && <button disabled={busy === chosen.id} className="btn ghost fill" onClick={() => changeStatus(chosen, "ignored")}><X size={15}/> Odrzuć ofertę</button>}
             </div>
           </> : <div className="detail-placeholder"><div className="placeholder-icon"><BriefcaseBusiness size={28}/></div><h3>Wybierz ofertę</h3><p>Kliknij ogłoszenie z listy, aby zobaczyć szczegóły, dopasowanie i dostępne działania.</p></div>}</section></div>
         </>}
-        {page === "applications" && <><PageHeading eyebrow="APPLICATION TRACKER" icon={Send} title="Moje aplikacje" desc="Historia ogłoszeń, dla których oznaczono wysłanie aplikacji."/>
-          <section className="panel data-panel"><div className="panel-bar"><strong>Historia aplikacji</strong><span>{applications.length} pozycji</span></div>
-            {applications.length ? applications.map(row => <div key={row.id} className="application-row"><div className="company-logo">{getInitials(row.company)}</div><div className="job-main"><strong>{row.title}</strong><small>{row.company} • {shortDate(row.created_at)}</small></div><span className="tag green">Oznaczono jako wysłane</span><a className="icon-button" href={row.url} target="_blank" rel="noopener noreferrer" aria-label="Otwórz ogłoszenie"><ExternalLink size={17}/></a></div>) : <Empty icon={Send} title="Brak aplikacji" message="Otwórz ofertę i oznacz ją jako aplikowaną po rzeczywistym wysłaniu zgłoszenia."/>}</section>
-        </>}
+        {page === "watches" && <SearchWatches sources={stats.sources} onMessage={setToast} onError={setError}/>}
+        {page === "applications" && <ApplicationBoard onMessage={setToast} onError={setError} onChanged={load}/>}
+
         {page === "notifications" && <><PageHeading eyebrow="ALERT CENTER" icon={Bell} title="Powiadomienia" desc="Informacje o nowo znalezionych dopasowaniach."/>
           <section className="panel data-panel"><div className="panel-bar"><strong>Ostatnie zdarzenia</strong><span>Telegram: {stats.telegram ? "skonfigurowany" : "niepołączony"}</span></div>
             {notices.length ? notices.map(n => <div key={n.id} className="event-row"><div className="event-icon"><Bell size={17}/></div><div><strong>{n.message}</strong><small>{shortDate(n.created_at)}</small></div></div>) : <Empty icon={Bell} title="Brak powiadomień" message="Nowe oferty spełniające Twój próg dopasowania pojawią się tutaj."/>}</section>
@@ -260,7 +274,8 @@ export default function Home() {
               <label>Lokalizacja<input maxLength={120} value={profile.location} onChange={e => setProfile({ ...profile, location: e.target.value })} placeholder="Np. Poznań, Polska"/></label>
               <label>Umiejętności i słowa kluczowe<small>Oddziel przecinkami</small><textarea rows={3} value={profile.keywords} onChange={e => setProfile({ ...profile, keywords: e.target.value })} placeholder="Python, REST API, FastAPI, AI"/></label>
               <label>Wykluczone frazy<small>Oferty zawierające te frazy otrzymają wynik 0%</small><input value={profile.excluded} onChange={e => setProfile({ ...profile, excluded: e.target.value })} placeholder="Np. Senior, staż"/></label>
-              <label>Treść CV<small>Wklej tekst CV — bez wysyłania do zewnętrznego modelu AI</small><textarea rows={7} value={profile.cv_text} onChange={e => setProfile({ ...profile, cv_text: e.target.value })} placeholder="Opis doświadczenia, projektów i technologii..."/></label>
+              <label>Treść CV<small>Wklej tekst CV lub wczytaj plik PDF — nic nie jest wysyłane do zewnętrznego modelu</small><textarea rows={7} value={profile.cv_text} onChange={e => setProfile({ ...profile, cv_text: e.target.value })} placeholder="Opis doświadczenia, projektów i technologii..."/></label>
+              <CvUploader onImported={text => setProfile(current => ({ ...current, cv_text: text }))} onMessage={setToast} onError={setError}/>
               <label className="checkbox-row"><input type="checkbox" checked={profile.remote_only} onChange={e => setProfile({ ...profile, remote_only: e.target.checked })}/><span>Uwzględniaj w rankingu tylko oferty zdalne</span></label>
               <label>Próg powiadomień: <strong>{profile.min_score}%</strong><input type="range" min="0" max="100" value={profile.min_score} onChange={e => setProfile({ ...profile, min_score: Number(e.target.value) })}/></label>
               <button className="btn primary" disabled={busy === "profile"} onClick={saveProfile}>{busy === "profile" ? <LoaderCircle className="spin" size={16}/> : <Check size={16}/>} Zapisz zmiany</button>

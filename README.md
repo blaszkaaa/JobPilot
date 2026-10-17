@@ -2,18 +2,18 @@
 
 **Open-source job discovery, semantic matching, notifications and application tracking.** A self-hosted, single-owner portfolio project with a dark dashboard inspired by Dokploy.
 
-## Working MVP
+## Release v0.2 — search watchers & application workspace\n\nThis version extends the first MVP with managed search queries, PDF CV parsing, and a full application pipeline. No third-party recruiter sites are automated or posted to by JobPilot.\n\n## Working MVP
 
 - Private owner login (HTTP-only signed cookie, no public registration).
 - Fetch jobs from **Arbeitnow** and optionally **Greenhouse**, **Lever** and **Adzuna (Poland)** official job APIs. No prohibited LinkedIn scraping.
 - **ML-based matching:** TF-IDF + cosine similarity, weighted against job keywords, location and remote preferences. Scores are heuristic relevance indicators, **not** hiring probabilities. ChatGPT is **not** powering the server in this release.
-- Personal profile and pasted resume text; exclusions, remote-only preference and matching threshold.
-- Search, filter, save/ignore jobs; manual application tracker.
-- Export a basic, editable cover-letter template to clipboard. **No automatic submissions yet.**
+- Personal profile, pasted resume text **or PDF CV import (2 MB, 12 pages)**; exclusions, remote-only preference and matching threshold. Raw PDF is processed transiently in the backend, and its extracted text is saved only when you confirm. Scanned PDFs require OCR (not implemented).
+- Search, filter, save/ignore jobs; **up to five saved searches** (query, location, enable/disable) for official Adzuna API; previous single-query fallback stays available until any search is created. Other provider feeds are unaffected.\n- **Application pipeline**: draft → applied → interview → offer/rejected/withdrawn, notes, editable cover-letter draft, follow-up date, stage history, CSV export. Status ‘applied’ is **manual confirmation**, not evidence of platform submission.
+- Create and edit truthful, reusable application draft and copy it to clipboard. **No automatic submissions yet.**
 - Optional Telegram alerts, automated polling every 30 minutes, SQLite persistence.
 - Responsive Next.js dashboard, FastAPI backend, Docker Compose setup.
 
-## Deploy to Dokploy
+## Deploy to Dokploy\n\n**Existing installation:** Pull latest `main` and redeploy. The SQLite schema migration runs automatically at startup; preserve your existing `jobpilot-data` volume. Back it up first.
 
 1. Create a **Compose** service and connect `blaszkaaa/JobPilot`, branch `main`.
 2. Set Compose Path to `./docker-compose.yml`.
@@ -23,8 +23,8 @@
    - `JOBPILOT_SESSION_SECRET` — random secret (minimum 32 characters).
    - `COOKIE_SECURE=true` — use HTTPS for the public domain.
 4. Optional: set `GREENHOUSE_BOARDS` and/or `LEVER_SITES` to comma-separated employer board identifiers. For Polish listings obtain `ADZUNA_APP_ID` and `ADZUNA_APP_KEY` from [Adzuna Developer](https://developer.adzuna.com/overview), with `ADZUNA_COUNTRY=pl` and optional `ADZUNA_QUERY=Python`. `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` enable alerts.
-5. Deploy. Under **Domains**, expose the **web** service on **container port 3000** and enable HTTPS. The API service remains internal, no external port.
-6. Sign in using the configured owner credentials. Open **Ustawienia** and enter keywords, location and resume text. Click **Skanuj oferty**.
+5. Deploy. Under **Domains**, expose the **web** service on **container port 3000** and enable HTTPS. The API service remains internal, no external port.\n6. Open **Wyszukiwania** to add up to five search rules. The new rules affect Adzuna only; without Adzuna credentials, they will be stored but not executed.\n7. Under **Ustawienia**, import a textual PDF CV if you prefer, review extracted text and click **Zapisz zmiany**. Under **Oferty pracy**, choose **Przygotuj aplikację** to open the application pipeline.
+8. Sign in using the configured owner credentials. Open **Ustawienia** and enter keywords, location and resume text. Click **Skanuj oferty**.
 
 The Compose file joins the frontend to the existing Dokploy `dokploy-network` network. If you use custom Traefik labels instead of the Dokploy Domains UI, configure them for `web:3000`. Keep the mounted `jobpilot-data` Docker volume to persist your database across deployments.
 
@@ -43,7 +43,7 @@ To access the web service locally, use `docker compose -f docker-compose.yml -f 
 
 ```
 web/             Next.js app, Polish UI, proxy /api → api service
-api/app/main.py  FastAPI, auth, matching, fetchers, background sync
+api/app/main.py  FastAPI, auth, matching, fetchers, background sync\napi/app/features.py  Search-watch CRUD, applications pipeline, migration, PDF import, CSV export\nweb/app/workspaces.tsx  UI for watch lists, pipeline, CV importer
 api/tests/       Matching and API tests
 docker-compose.yml
 ```
@@ -62,12 +62,12 @@ This is a **real MVP**, not a production multi-tenant SaaS. One owner per deploy
 
 Upcoming features:
 1. Better deduplication and location parsing (currently deduplication by provider ID).
-2. Per-company boards configuration from UI, real notification preferences, scheduled job queues.
-3. CV PDF import; user-labeled ranking dataset and learned reranker.
+2. Per-company boards configuration from UI, real notification preferences, scheduled job queues and follow-up reminders (dates are currently recorded but not pushed as reminders).
+3. User-labeled ranking dataset and learned reranker: current ML relevance is TF-IDF, not a trained personalized model.
 4. Draft assistant and optional approved provider with user-controlled credentials.
-5. Website application adapters with explicit user consent, visible review screen, per-source compliance checks, rate limits and audit trail.
+5. Permitted website application adapters with explicit user consent, visible review screen, per-source compliance checks, rate limits and audit trail.
 
-**JobPilot does not submit job applications automatically in v0.1.** Only the user can mark an application as sent.
+**JobPilot does not submit job applications automatically in v0.2.** Only the user can confirm that an application was sent.
 
 ## Security notes
 
@@ -81,3 +81,12 @@ cd ../web && npm install && npm run typecheck && npm run build
 ```
 
 MIT License.
+
+### Using the application workflow
+
+1. Pick a job, select **Przygotuj aplikację**. This creates an editable draft — no information is sent to the employer.
+2. Open **Moje aplikacje**, choose the draft, review/edit the message and optionally add notes and a follow-up date.
+3. Open the job offer and apply directly at the employer's site. Only then change the stage to **Wysłane** and save; JobPilot records this manual confirmation.
+4. Advance the stage as the hiring process progresses. Use **Eksport CSV** for a local backup of your pipeline.
+
+Search watches consume Adzuna API quota: with five enabled queries and 30-minute polls, this release can issue up to 240 Adzuna searches per day (not counting manual scans). Configure fewer watches or increase `SYNC_INTERVAL_SECONDS` to fit your plan.

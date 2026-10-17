@@ -82,6 +82,9 @@ def initialize():
             status TEXT NOT NULL, created_at TEXT NOT NULL)""")
         db.commit()
 
+    from .features import initialize_features
+    initialize_features()
+
 def profile_dict():
     with connection() as db:
         return dict(db.execute("SELECT * FROM profile WHERE id=1").fetchone())
@@ -211,33 +214,38 @@ async def fetch_jobs(client):
         except (httpx.HTTPError, ValueError, KeyError, TypeError) as exc:
             errors.append(f"Lever/{site}: {type(exc).__name__}")
     if ADZUNA_APP_ID and ADZUNA_APP_KEY and re.fullmatch(r"[a-z]{2}", ADZUNA_COUNTRY):
-        profile = profile_dict()
-        terms = split_terms(profile["keywords"])
-        query = ADZUNA_QUERY or (terms[0] if terms else "python")
-        # No CV contents or personal data are sent to the third-party API.
-        city = profile["location"].split(",")[0].strip()
-        where = "" if city.lower() in {"polska", "poland", "remote", ""} else city
-        try:
-            res = await client.get(
-                f"https://api.adzuna.com/v1/api/jobs/{ADZUNA_COUNTRY}/search/1",
-                params={"app_id": ADZUNA_APP_ID, "app_key": ADZUNA_APP_KEY,
-                        "results_per_page": 50, "what": query, "where": where}
-            )
-            res.raise_for_status()
-            for item in res.json().get("results", []):
-                combined.append({
-                    "id": f"adzuna:{ADZUNA_COUNTRY}:{item['id']}",
-                    "title": item.get("title") or "Oferta pracy",
-                    "company": (item.get("company") or {}).get("display_name") or "Nieznana firma",
-                    "location": (item.get("location") or {}).get("display_name") or "Nie podano",
-                    "remote": bool(re.search(r"remote|zdaln", (item.get("title") or "") + " " + (item.get("description") or ""), re.I)),
-                    "description": plain(item.get("description") or ""),
-                    "url": safe_url(item.get("redirect_url")),
-                    "source": "Adzuna",
-                    "posted_at": item.get("created") or ""
-                })
-        except (httpx.HTTPError, ValueError, KeyError, TypeError) as exc:
-            errors.append("Adzuna: " + type(exc).__name__)
+        # Saved searches add precise, user-managed queries. Fallback preserves v0.1 behaviour.
+        from .features import active_watches
+        watches, configured = active_watches()
+        if not configured:
+            profile = profile_dict()
+            terms = split_terms(profile["keywords"])
+            city = profile["location"].split(",")[0].strip()
+            watches = [{"query": ADZUNA_QUERY or (terms[0] if terms else "python"),
+                        "location": "" if city.lower() in {"polska", "poland", "remote"} else city}]
+        for watch in watches:
+            try:
+                res = await client.get(
+                    f"https://api.adzuna.com/v1/api/jobs/{ADZUNA_COUNTRY}/search/1",
+                    params={"app_id": ADZUNA_APP_ID, "app_key": ADZUNA_APP_KEY,
+                            "results_per_page": 50, "what": watch["query"],
+                            "where": watch["location"]}
+                )
+                res.raise_for_status()
+                for item in res.json().get("results", []):
+                    combined.append({
+                        "id": f"adzuna:{ADZUNA_COUNTRY}:{item['id']}",
+                        "title": item.get("title") or "Oferta pracy",
+                        "company": (item.get("company") or {}).get("display_name") or "Nieznana firma",
+                        "location": (item.get("location") or {}).get("display_name") or "Nie podano",
+                        "remote": bool(re.search(r"remote|zdaln", (item.get("title") or "") + " " + (item.get("description") or ""), re.I)),
+                        "description": plain(item.get("description") or ""),
+                        "url": safe_url(item.get("redirect_url")),
+                        "source": "Adzuna",
+                        "posted_at": item.get("created") or ""
+                    })
+            except (httpx.HTTPError, ValueError, KeyError, TypeError) as exc:
+                errors.append("Adzuna: " + type(exc).__name__)
     return [j for j in combined if j["url"]], errors
 
 async def send_telegram(client, message):
@@ -310,7 +318,7 @@ async def lifespan(app: FastAPI):
         except asyncio.CancelledError:
             pass
 
-app = FastAPI(title="JobPilot", version="0.1.0", lifespan=lifespan, docs_url=None, redoc_url=None)
+app = FastAPI(title="JobPilot", version="0.2.0", lifespan=lifespan, docs_url=None, redoc_url=None)
 
 @app.get("/health")
 def health():
@@ -369,7 +377,7 @@ def stats(_=Depends(authenticated)):
         matched = db.execute("SELECT count(*) FROM jobs WHERE score>=? AND status != 'ignored'",
                              (profile_dict()["min_score"],)).fetchone()[0]
         saved = db.execute("SELECT count(*) FROM jobs WHERE status='saved'").fetchone()[0]
-        applied = db.execute("SELECT count(*) FROM applications").fetchone()[0]
+        applied = db.execute("SELECT count(*) FROM applications WHERE status IN ('applied','interview','offer','rejected')").fetchone()[0]
     return {"total": total, "matched": matched, "saved": saved, "applied": applied,
             "last_sync": last_sync, "telegram": bool(TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID),
             "sources": ["Arbeitnow"] + (["Greenhouse"] if GREENHOUSE_BOARDS else []) +
@@ -411,8 +419,8 @@ def change_status(job_id: str, body: StatusChange, _=Depends(authenticated)):
             raise HTTPException(404, "Oferta nie istnieje")
         db.execute("UPDATE jobs SET status=? WHERE id=?", (body.status, job_id))
         if body.status == "applied":
-            db.execute("INSERT OR IGNORE INTO applications(job_id,status,created_at) VALUES (?,?,?)",
-                       (job_id, "manual", current_utc()))
+            db.execute("INSERT OR IGNORE INTO applications(job_id,status,created_at,updated_at) VALUES (?,?,?,?)",
+                       (job_id, "applied", current_utc(), current_utc()))
         db.commit()
     return {"ok": True}
 
@@ -442,3 +450,7 @@ def draft(job_id: str, _=Depends(authenticated)):
               "Chętnie opowiem, jak mogę je wykorzystać w Państwa zespole.\n\n"
               f"Z poważaniem,\n{name}")
     return {"draft": letter, "type": "template", "sent": False}
+
+# The optional search rules, application pipeline and PDF import are in a separate module.
+from .features import router as workspace_router
+app.include_router(workspace_router)
