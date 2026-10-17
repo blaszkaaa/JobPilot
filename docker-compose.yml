@@ -1,0 +1,45 @@
+services:
+  api:
+    build:
+      context: ./api
+    restart: unless-stopped
+    environment:
+      DATABASE_PATH: /data/jobpilot.sqlite3
+      JOBPILOT_ADMIN_EMAIL: ${JOBPILOT_ADMIN_EMAIL:?Set JOBPILOT_ADMIN_EMAIL}
+      JOBPILOT_ADMIN_PASSWORD: ${JOBPILOT_ADMIN_PASSWORD:?Set JOBPILOT_ADMIN_PASSWORD}
+      JOBPILOT_SESSION_SECRET: ${JOBPILOT_SESSION_SECRET:?Set JOBPILOT_SESSION_SECRET}
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}
+      SYNC_INTERVAL_SECONDS: ${SYNC_INTERVAL_SECONDS:-1800}
+      GREENHOUSE_BOARDS: ${GREENHOUSE_BOARDS:-}
+      LEVER_SITES: ${LEVER_SITES:-}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
+    volumes:
+      - jobpilot-data:/data
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=4)"]
+      interval: 30s
+      timeout: 7s
+      retries: 3
+
+  web:
+    build:
+      context: ./web
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    expose:
+      - "3000"
+    networks:
+      - default
+      - dokploy-network
+
+networks:
+  dokploy-network:
+    external: true
+
+volumes:
+  jobpilot-data:
