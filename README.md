@@ -5,7 +5,7 @@
 ## Working MVP
 
 - Private owner login (HTTP-only signed cookie, no public registration).
-- Fetch jobs from **Arbeitnow** and optionally **Greenhouse** / **Lever** public job-board APIs. No prohibited LinkedIn scraping.
+- Fetch jobs from **Arbeitnow** and optionally **Greenhouse**, **Lever** and **Adzuna (Poland)** official job APIs. No prohibited LinkedIn scraping.
 - **ML-based matching:** TF-IDF + cosine similarity, weighted against job keywords, location and remote preferences. Scores are heuristic relevance indicators, **not** hiring probabilities. ChatGPT is **not** powering the server in this release.
 - Personal profile and pasted resume text; exclusions, remote-only preference and matching threshold.
 - Search, filter, save/ignore jobs; manual application tracker.
@@ -22,7 +22,7 @@
    - `JOBPILOT_ADMIN_PASSWORD` — random password (minimum 12 characters).
    - `JOBPILOT_SESSION_SECRET` — random secret (minimum 32 characters).
    - `COOKIE_SECURE=true` — use HTTPS for the public domain.
-4. Optional: set `GREENHOUSE_BOARDS` and/or `LEVER_SITES` to comma-separated employer board identifiers. `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` enable alerts.
+4. Optional: set `GREENHOUSE_BOARDS` and/or `LEVER_SITES` to comma-separated employer board identifiers. For Polish listings obtain `ADZUNA_APP_ID` and `ADZUNA_APP_KEY` from [Adzuna Developer](https://developer.adzuna.com/overview), with `ADZUNA_COUNTRY=pl` and optional `ADZUNA_QUERY=Python`. `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` enable alerts.
 5. Deploy. Under **Domains**, expose the **web** service on **container port 3000** and enable HTTPS. The API service remains internal, no external port.
 6. Sign in using the configured owner credentials. Open **Ustawienia** and enter keywords, location and resume text. Click **Skanuj oferty**.
 

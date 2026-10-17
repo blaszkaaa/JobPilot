@@ -28,6 +28,10 @@ COOKIE_SECURE = os.getenv("COOKIE_SECURE", "true").lower() == "true"
 SYNC_INTERVAL = max(300, int(os.getenv("SYNC_INTERVAL_SECONDS", "1800")))
 GREENHOUSE_BOARDS = [x.strip() for x in os.getenv("GREENHOUSE_BOARDS", "").split(",") if x.strip()]
 LEVER_SITES = [x.strip() for x in os.getenv("LEVER_SITES", "").split(",") if x.strip()]
+ADZUNA_APP_ID = os.getenv("ADZUNA_APP_ID", "")
+ADZUNA_APP_KEY = os.getenv("ADZUNA_APP_KEY", "")
+ADZUNA_COUNTRY = os.getenv("ADZUNA_COUNTRY", "pl").lower()
+ADZUNA_QUERY = os.getenv("ADZUNA_QUERY", "").strip()
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 sync_lock = asyncio.Lock()
@@ -206,6 +210,34 @@ async def fetch_jobs(client):
             combined += [lever_job(j, site) for j in res.json()[:150]]
         except (httpx.HTTPError, ValueError, KeyError, TypeError) as exc:
             errors.append(f"Lever/{site}: {type(exc).__name__}")
+    if ADZUNA_APP_ID and ADZUNA_APP_KEY and re.fullmatch(r"[a-z]{2}", ADZUNA_COUNTRY):
+        profile = profile_dict()
+        terms = split_terms(profile["keywords"])
+        query = ADZUNA_QUERY or (terms[0] if terms else "python")
+        # No CV contents or personal data are sent to the third-party API.
+        city = profile["location"].split(",")[0].strip()
+        where = "" if city.lower() in {"polska", "poland", "remote", ""} else city
+        try:
+            res = await client.get(
+                f"https://api.adzuna.com/v1/api/jobs/{ADZUNA_COUNTRY}/search/1",
+                params={"app_id": ADZUNA_APP_ID, "app_key": ADZUNA_APP_KEY,
+                        "results_per_page": 50, "what": query, "where": where}
+            )
+            res.raise_for_status()
+            for item in res.json().get("results", []):
+                combined.append({
+                    "id": f"adzuna:{ADZUNA_COUNTRY}:{item['id']}",
+                    "title": item.get("title") or "Oferta pracy",
+                    "company": (item.get("company") or {}).get("display_name") or "Nieznana firma",
+                    "location": (item.get("location") or {}).get("display_name") or "Nie podano",
+                    "remote": bool(re.search(r"remote|zdaln", (item.get("title") or "") + " " + (item.get("description") or ""), re.I)),
+                    "description": plain(item.get("description") or ""),
+                    "url": safe_url(item.get("redirect_url")),
+                    "source": "Adzuna",
+                    "posted_at": item.get("created") or ""
+                })
+        except (httpx.HTTPError, ValueError, KeyError, TypeError) as exc:
+            errors.append("Adzuna: " + type(exc).__name__)
     return [j for j in combined if j["url"]], errors
 
 async def send_telegram(client, message):
@@ -341,7 +373,8 @@ def stats(_=Depends(authenticated)):
     return {"total": total, "matched": matched, "saved": saved, "applied": applied,
             "last_sync": last_sync, "telegram": bool(TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID),
             "sources": ["Arbeitnow"] + (["Greenhouse"] if GREENHOUSE_BOARDS else []) +
-            (["Lever"] if LEVER_SITES else [])}
+            (["Lever"] if LEVER_SITES else []) +
+            (["Adzuna"] if ADZUNA_APP_ID and ADZUNA_APP_KEY else [])}
 
 @app.get("/api/jobs")
 def list_jobs(q: str = "", status: str = "all", remote: bool = False, _=Depends(authenticated)):

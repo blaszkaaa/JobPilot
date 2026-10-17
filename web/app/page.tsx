@@ -267,8 +267,8 @@ export default function Home() {
             </div>
           </section>
           <div className="settings-side"><section className="panel small-panel"><div className="panel-header"><div><h2><Globe2 size={18}/> Źródła ofert</h2><p>Aktywne integracje API</p></div></div>
-            {["Arbeitnow", "Greenhouse", "Lever"].map(source => <div className="info-line" key={source}><span>{source}</span><span className={"tag " + (stats.sources.includes(source) ? "green" : "")}>{stats.sources.includes(source) ? "Aktywne" : "Wymaga konfiguracji"}</span></div>)}
-            <p className="subtle-note">Dodaj identyfikatory firm Greenhouse i Lever w zmiennych środowiskowych Dokploy.</p>
+            {["Arbeitnow", "Greenhouse", "Lever", "Adzuna"].map(source => <div className="info-line" key={source}><span>{source}</span><span className={"tag " + (stats.sources.includes(source) ? "green" : "")}>{stats.sources.includes(source) ? "Aktywne" : "Wymaga konfiguracji"}</span></div>)}
+            <p className="subtle-note">Dodaj identyfikatory firm Greenhouse i Lever lub klucze Adzuna w zmiennych środowiskowych Dokploy.</p>
           </section><section className="panel small-panel"><div className="panel-header"><div><h2><ShieldCheck size={18}/> Integracja ChatGPT</h2><p>Bezpieczeństwo planu użytkownika</p></div></div>
             <div className="info-pill"><LockKeyhole size={15}/> OAuth nieaktywny na serwerze</div>
             <p className="subtle-note">Logowanie kontem ChatGPT i korzystanie z subskrypcji wymaga zgodnego z zasadami, lokalnego klienta Sign in with ChatGPT. Wersja serwerowa nie przechowuje tokenów ChatGPT.</p>

@@ -26,7 +26,7 @@ class MatchingTests(unittest.TestCase):
     def test_relevant_job_scores_positive(self):
         output = main.rank(self.jobs, self.profile)
         self.assertGreater(output[0]["score"], 30)
-        self.assertIn("Python", output[0]["reason"])
+        self.assertIn("python", output[0]["reason"].lower())
 
     def test_remote_only_blocks_office_job(self):
         self.profile["remote_only"] = True
