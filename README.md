@@ -2,6 +2,18 @@
 
 **Open-source job discovery, semantic matching, notifications and application tracking.** A self-hosted, single-owner portfolio project with a dark dashboard inspired by Dokploy.
 
+## Release v0.4 — Dokploy-inspired interface
+
+The dashboard is redesigned using a **neutral black / zinc theme** inspired by Dokploy's project and deployment screens, rather than the earlier purple SaaS theme. JobPilot uses its own name, logo and content.
+
+- Narrow graphite navigation rail with **Home and Settings sections** and collapsible desktop sidebar (remembers your preference).
+- **Project header and compact horizontal tabs** consistent across workspace views.
+- Compact statistics and configurable **provider status tiles**; indicators show **configured** sources, not guaranteed live API reachability.
+- Global `Ctrl+K` command search: quickly open a workspace page or a matching job. `Esc` closes the search.
+- Job listings have **list and grid views**; search, filters, feedback and application actions remain available in both.
+- Consistent neutral buttons, forms, panels, states and responsive mobile layout.
+- No API or database changes required for the design migration.
+
 ## Release v0.3 — feedback-driven matching and reliable inbox
 
 - Click **Pasuje** / **Nie pasuje** on a listing. Explicit like/dislike feedback is stored in SQLite and immediately reranks other listings using TF-IDF content similarity to examples. This is a **simple content-based adaptive ML ranking**, not an LLM, a fine-tuned model, or probability of getting hired. Undo a vote by clicking it again.
@@ -100,3 +112,7 @@ MIT License.
 Search watches consume Adzuna API quota: with five enabled queries and 30-minute polls, this release can issue up to 240 Adzuna searches per day (not counting manual scans). Configure fewer watches or increase `SYNC_INTERVAL_SECONDS` to fit your plan.
 
 ### Adaptive matching scores\n\nA liked or disliked listing becomes a labelled example (kept locally). For each other job, its TF-IDF vector is compared to liked/disliked examples. Similarity can adjust the original profile-fit score by up to +22 points or −27 points. Saved jobs do **not** count as positive feedback automatically. All content-based adjustments can be cleared by undoing votes. This is a heuristic ranking scale between 0–100, not a calibrated probability of interviews or hiring.\n
+
+### UI development notes
+
+Design tokens and layout styles live in `web/app/dokploy.css`; the original styles remain in `globals.css` and `workspaces.css` for compatibility. UI functionality lives in `web/app/page.tsx` and `web/app/workspaces.tsx`. Do not copy Dokploy trademarks or logo.

@@ -1,0 +1,263 @@
+
+/* JobPilot v0.4 — Dokploy-inspired monochrome design system, not Dokploy branding. */
+:root {
+  --bg: #09090b;
+  --sidebar: #171717;
+  --panel: #111113;
+  --panel2: #18181b;
+  --border: #29292e;
+  --subborder: #27272b;
+  --text: #fafafa;
+  --muted: #a1a1aa;
+  --dim: #71717a;
+  --purple: #e4e4e7;
+  --purple-hover: #fafafa;
+  --green: #22c55e;
+  --orange: #fbbf24;
+}
+html { background: var(--bg); }
+body { background: var(--bg); color: var(--text); font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 13px; }
+button,input,textarea,select { font-family: inherit; }
+button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible { outline: 2px solid #c6c6cb; outline-offset: 2px; }
+::selection { background: #52525b; color: white; }
+.dokploy-theme { background: var(--bg); }
+.dokploy-theme .sidebar { width: 245px; flex-basis: 245px; background: #171717; border-right: 1px solid #2b2b2b; transition: width .18s, flex-basis .18s; }
+.dokploy-theme .brand { padding: 18px 14px 19px; gap: 10px; letter-spacing: -.4px; font: 650 14px Inter, system-ui, sans-serif; min-height: 66px; }
+.dokploy-theme .brand-name { flex: 1; white-space: nowrap; display: flex; flex-direction: column; gap: 3px; }
+.dokploy-theme .brand-name small { color: #85858b; font-size: 10px; font-weight: 400; letter-spacing: 0; }
+.dokploy-theme .brand-icon { width: 29px; height: 29px; border-radius: 7px; background: #f6f6f7; color: #171717; box-shadow: none; flex: 0 0 29px; }
+.dokploy-theme .sidebar-collapse-button { opacity: .6; }
+.dokploy-theme .sidebar-collapse-button:hover { opacity: 1; }
+.dokploy-theme .workspace { background: #222225; border: 1px solid #36363b; border-radius: 7px; margin: 2px 12px 23px; padding: 9px 10px; gap: 10px; }
+.dokploy-theme .workspace-avatar { background: #303033; color: #dfdfe2; border: 1px solid #3c3c3e; width: 32px; height: 32px; flex-basis: 32px; border-radius: 6px; }
+.dokploy-theme .workspace-text strong { font-size: 11px; color: #e5e5e7; }
+.dokploy-theme .workspace-text small { font-size: 10px; color: #88888f; }
+.dokploy-theme .nav-caption { color: #7b7b83; font-size: 10px; font-weight: 600; letter-spacing: .9px; padding: 0 22px; margin-bottom: 8px; }
+.dokploy-theme .secondary-caption { margin-top: 23px; }
+.dokploy-theme .sidebar nav { gap: 2px; padding: 0 11px; }
+.dokploy-theme .nav-item { padding: 9px 11px; min-height: 36px; font-size: 12px; color: #babac1; font-weight: 500; border-radius: 6px; gap: 11px; }
+.dokploy-theme .nav-item:hover { background: #242426; color: #f9f9f9; }
+.dokploy-theme .nav-item.active { background: #303033; color: #fff; border-color: transparent; }
+.dokploy-theme .nav-item.active svg { color: #fff; }
+.dokploy-theme .nav-count { background: #48484c; border-radius: 5px; color: white; font-size: 10px; }
+.dokploy-theme .sidebar-bottom { padding: 12px; }
+.dokploy-theme .sync-card { background: #1e1e20; border: 1px solid #343439; border-radius: 7px; padding: 12px; }
+.dokploy-theme .sync-title { font-size: 11px; }
+.dokploy-theme .sync-card p { margin: 8px 0; font-size: 10px; }
+.dokploy-theme .pulse-dot { background: #22c55e; box-shadow: 0 0 0 3px #22c55e15; width: 7px; height: 7px; }
+.dokploy-theme .sidebar-account { border-color: #323236; padding: 14px 0 1px; }
+.dokploy-theme .user-avatar,.dokploy-theme .top-avatar { color: #e4e4e7; background: #333337; border-color: #434349; }
+.dokploy-theme .topbar { height: 58px; padding: 0 31px; background: #0e0e10; border-bottom: 1px solid #28282b; }
+.dokploy-theme .top-left { gap: 8px; }
+.dokploy-theme .top-actions { gap: 16px; }
+.dokploy-theme .breadcrumb { color: #8e8e98; font-size: 11px; }
+.dokploy-theme .breadcrumb-current { color: #f6f6f7; font-size: 11px; font-weight: 600; }
+.dokploy-theme .topbar-divider { width: 1px; height: 22px; background: #2e2e33; margin: 0 10px 0 2px; }
+.dokploy-theme .icon-button { color: #9999a1; border-radius: 5px; }
+.dokploy-theme .icon-button:hover { color: #fff; background: #29292c; }
+.dokploy-theme .desktop-toggle { display: grid; }
+.dokploy-theme .top-status { font-size: 11px; color: #a6a6ad; }
+.dokploy-theme .inbox-badge { background: #f5f5f5; color: #111; }
+.dokploy-theme .top-avatar { width: 28px; height: 28px; border-radius: 50%; font-size: 10px; }
+.dokploy-theme .content { max-width: 1580px; padding: 27px 31px 17px; }
+.dokploy-theme .heading-row { margin: 25px 0 22px; }
+.dokploy-theme .heading-row h1 { font-family: Inter, system-ui, sans-serif; font-size: 20px; font-weight: 650; letter-spacing: -.5px; margin-bottom: 6px; }
+.dokploy-theme .heading-row p { font-size: 11.5px; color: #9c9ca4; }
+.dokploy-theme .eyebrow { letter-spacing: .75px; color: #92929c; font-size: 9px; margin-bottom: 10px; font-weight: 650; }
+.dokploy-theme .btn { border-radius: 6px; font-size: 11px; padding: 8px 12px; min-height: 33px; gap: 7px; font-weight: 600; transition: background .12s, border-color .12s; }
+.dokploy-theme .btn.primary { background: #fafafa; color: #18181b; border-color: #fafafa; }
+.dokploy-theme .btn.primary:hover { background: #d8d8dc; border-color: #d8d8dc; }
+.dokploy-theme .btn.secondary { background: #202023; color: #eeeeef; border: 1px solid #38383b; }
+.dokploy-theme .btn.secondary:hover { background: #2d2d30; }
+.dokploy-theme .btn.ghost { background: #101012; color: #adadb7; border-color: #39393d; }
+.dokploy-theme .btn.ghost:hover { background: #222225; color: #fff; }
+.dokploy-theme .text-button { font-size: 10.5px; color: #d4d4d8; }
+.dokploy-theme .text-button:hover { color: white; }
+.dokploy-theme .panel { background: #101012; border: 1px solid #29292c; border-radius: 8px; }
+.dokploy-theme .panel-header { border-bottom-color: #29292c; padding: 17px 19px; }
+.dokploy-theme .panel-header h2 { font-family: Inter, system-ui, sans-serif; font-size: 12.5px; font-weight: 600; }
+.dokploy-theme .panel-header h2 svg { color: #a1a1aa; }
+.dokploy-theme .panel-header p { font-size: 10.5px; color: #85858e; margin-top: 5px; }
+.dokploy-theme .tag { color: #b5b5bd; border-color: #3d3d43; background: #222226; font-size: 9px; }
+.dokploy-theme .tag.purple { color: #e4e4e7; background: #29292c; border-color: #45454a; }
+.dokploy-theme .tag.green { background: #112e20; border-color: #1a4b31; color: #7adc9b; }
+.dokploy-theme .stats-grid { gap: 12px; margin-bottom: 26px; }
+.dokploy-theme .stat-card { min-height: 126px; padding: 17px 18px; border-radius: 8px; background: #111113; border-color: #29292c; }
+.dokploy-theme .stat-heading { color: #a1a1aa; font-size: 11px; }
+.dokploy-theme .stat-icon,.dokploy-theme .stat-icon.highlight { background: #232326; color: #a6a6af; border-radius: 6px; width: 31px; height: 31px; }
+.dokploy-theme .stat-card > strong { font-family: Inter, system-ui, sans-serif; font-size: 28px; font-weight: 650; letter-spacing: -.7px; margin: 8px 0 6px; }
+.dokploy-theme .stat-card > small { font-size: 10px; color: #82828b; }
+.dokploy-theme .dashboard-grid { gap: 15px; grid-template-columns: minmax(0, 1.46fr) minmax(280px, 0.85fr); }
+.dokploy-theme .side-panels { gap: 15px; }
+.dokploy-theme .info-line { border-bottom-color: #28282c; margin: 0 17px; padding: 13px 0; }
+.dokploy-theme .engine-orb { background: #242426; color: #e2e2e5; border: 1px solid #3d3d40; }
+.dokploy-theme .engine-line p { color: #93939b; }
+.dokploy-theme .job-row { border-bottom-color: #27272c; padding: 15px 17px; gap: 13px; }
+.dokploy-theme .job-row:hover { background: #1b1b1e; }
+.dokploy-theme .job-row.selected { background: #242427; box-shadow: inset 2px 0 #eee; }
+.dokploy-theme .job-main > strong { font-size: 11.5px; font-weight: 600; color: #f1f1f2; }
+.dokploy-theme .job-meta { color: #92929c; font-size: 10.5px; gap: 6px; }
+.dokploy-theme .company-logo { background: #28282c; color: #d8d8df; border: 1px solid #39393f; border-radius: 6px; width: 37px; height: 37px; flex-basis: 37px; font: 650 11px Inter, system-ui, sans-serif; }
+.dokploy-theme .company-logo.big { width: 50px; height: 50px; }
+.dokploy-theme .score { border-radius: 5px; background: #27272b; color: #d4d4d8; padding: 6px 8px; font-size: 11px; }
+.dokploy-theme .score.high { background: #143324; color: #7bd8a2; }
+.dokploy-theme .score.medium { background: #362a16; color: #e2bf81; }
+.dokploy-theme .remote-label { background: #163826; color: #8ddeaa; }
+.dokploy-theme .searchbox,.dokploy-theme .select-wrap { background: #161618; border: 1px solid #36363a; border-radius: 6px; height: 36px; }
+.dokploy-theme .searchbox input { color: #f5f5f5; font-size: 11.5px; }
+.dokploy-theme .select-wrap select { color: #dedee1; }
+.dokploy-theme .toggle-filter { color: #a1a1aa; }
+.dokploy-theme input[type=checkbox],.dokploy-theme input[type=range] { accent-color: #e4e4e7; }
+.dokploy-theme .panel-bar { border-color: #2a2a2d; padding: 12px 15px; }
+.dokploy-theme .job-list-panel { max-height: 930px; }
+.dokploy-theme .detail-panel { padding: 21px; }
+.dokploy-theme .detail-panel h2 { font: 650 18px Inter, system-ui, sans-serif; }
+.dokploy-theme .detail-score { border: 1px solid #36363b; background: #1b1b1e; }
+.dokploy-theme .detail-score small { color: #a4a4af; }
+.dokploy-theme .detail-score strong { color: #f5f5f5; }
+.dokploy-theme .bar { background: #3f3f43; }
+.dokploy-theme .bar span { background: #e4e4e7; }
+.dokploy-theme .feedback-controls { border-color: #36363d; background: #19191c; }
+.dokploy-theme .feedback-button { border-color: #38383c; background: #232326; color: #c8c8d0; }
+.dokploy-theme .feedback-button.chosen.good { color: #7bd8a2; }
+.dokploy-theme .feedback-button.chosen.bad { color: #efa0a0; }
+.dokploy-theme .empty-icon,.dokploy-theme .placeholder-icon { color: #dedee0; background: #28282b; }
+.dokploy-theme .small-panel .btn { margin-bottom: 12px; }
+.dokploy-theme .settings-form input:not([type=checkbox]):not([type=range]),
+.dokploy-theme .settings-form textarea,
+.dokploy-theme .drawer-body input,
+.dokploy-theme .drawer-body select,
+.dokploy-theme .drawer-body textarea { background: #18181b; border-color: #38383c; border-radius: 6px; }
+.dokploy-theme .settings-form input:focus,.dokploy-theme .settings-form textarea:focus { border-color: #898990; }
+.dokploy-theme .settings-form label { font-size: 11px; font-weight: 600; }
+.dokploy-theme .info-pill { color: #dfc89a; }
+.dokploy-theme .login-root { background: #09090b; }
+.dokploy-theme .toast { background: #202522; color: #c5ecd4; border-color: #336644; }
+.dokploy-theme .workspace-tip { background: #171719; border: 1px solid #3b3b40; border-radius: 7px; color: #e3e3e6; }
+.dokploy-theme .workspace-tip strong { color: #e3e3e6; }
+.dokploy-theme .workspace-tip p { color: #92929b; }
+.dokploy-theme .watch-icon { background: #27272b; color: #d6d6d9; }
+.dokploy-theme .switch-button.on { background: #efeff0; border-color: #c0c0c4; }
+.dokploy-theme .switch-button.on span { background: #141417; }
+.dokploy-theme .cv-upload { background: #222225; border: 1px dashed #77777d; color: #e3e3e6 !important; }
+.dokploy-theme .cv-upload:hover { background: #2c2c2e; }
+.dokploy-theme .pipeline-card.active { border-color: #aaaab0; }
+.dokploy-theme .pipeline-company { background: #303033; color: #f1f1f1; }
+.dokploy-theme .app-drawer { background: #131315; border-left-color: #34343a; }
+.dokploy-theme .history-line { border-color: #a4a4aa; background: #323235; }
+.dokploy-theme .inbox-badge { background: #f3f3f3; color: #141414; }
+.dokploy-theme footer { border-top: 1px solid #242429; padding-top: 18px; color: #777780; }
+.dokploy-theme .footer-dot { color: #999; }
+.dokploy-theme .eyebrow svg { color: #92929a; }
+
+/* New Dokploy-like project top and in-page tabs */
+.project-header { border: 1px solid #2d2d30; background: #111113; border-radius: 9px 9px 0 0; padding: 17px 19px; display: flex; justify-content: space-between; align-items: center; gap: 14px; }
+.project-identity { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.project-icon { display: grid; place-items: center; height: 40px; width: 40px; border-radius: 8px; flex: 0 0 40px; color: white; border: 1px solid #414146; background: #242428; }
+.project-identity h2 { font-size: 15px; font-weight: 650; display: flex; align-items: center; gap: 9px; letter-spacing: -.2px; }
+.project-version { color: #c9c9cc; border: 1px solid #414145; background: #242427; border-radius: 4px; font-size: 9px; padding: 3px 7px; font-weight: 500; }
+.project-identity p { color: #8c8c96; font-size: 10.5px; margin-top: 6px; }
+.project-environment { display: flex; align-items: center; gap: 9px; color: #a3a3ad; font-size: 10px; white-space: nowrap; }
+.project-separator { color: #55555e; }
+.project-tabs { border: 1px solid #2d2d30; border-top: 0; border-radius: 0 0 9px 9px; background: #111113; padding: 7px 11px; display: flex; gap: 3px; align-items: center; overflow-x: auto; white-space: nowrap; scrollbar-width: thin; scrollbar-color: #404045 transparent; }
+.project-tabs button { background: transparent; border: 1px solid transparent; border-radius: 5px; color: #92929c; padding: 9px 15px; font-size: 11px; font-weight: 500; }
+.project-tabs button:hover { color: #fff; background: #242426; }
+.project-tabs button.active { background: #2b2b2e; border-color: #39393e; color: #fff; font-weight: 600; }
+.service-heading { margin: 25px 0 13px; display: flex; align-items: end; justify-content: space-between; gap: 16px; }
+.service-heading h2 { font-size: 12.5px; font-weight: 650; margin: 0 0 4px; }
+.service-heading p { color: #8a8a95; font-size: 10.5px; }
+.services-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 12px; margin-bottom: 23px; }
+.service-tile { min-width: 0; position: relative; display: grid; align-content: start; gap: 8px; background: #111113; border: 1px solid #2c2c30; border-radius: 8px; padding: 15px; text-align: left; color: #f5f5f5; min-height: 119px; }
+.service-tile:hover { border-color: #52525a; background: #19191c; }
+.service-tile-head { display: flex; justify-content: space-between; align-items: start; }
+.service-tile-icon { color: #b4b4bc; display: grid; place-items: center; height: 28px; width: 28px; border: 1px solid #333338; background: #222226; border-radius: 6px; }
+.service-indicator { display: block; height: 7px; width: 7px; border-radius: 50%; background: #51515a; margin-top: 3px; }
+.service-indicator.active { background: #22c55e; box-shadow: 0 0 0 3px #22c55e18; }
+.service-tile strong { font-size: 11.5px; font-weight: 650; }
+.service-tile small { color: #85858f; font-size: 10px; }
+.service-arrow { position: absolute; right: 13px; bottom: 13px; color: #73737b; }
+
+/* Command palette and view switch */
+.command-trigger { border: 1px solid #35353a; border-radius: 6px; min-width: 224px; display: flex; align-items: center; gap: 10px; background: #19191c; color: #93939d; padding: 7px 9px; font-size: 11px; }
+.command-trigger:hover { color: #fff; border-color: #5a5a60; }
+.command-trigger span { flex: 1; text-align: left; }
+.command-trigger kbd,.command-footer kbd { background: #2e2e32; border: 1px solid #444448; color: #c9c9ce; border-radius: 4px; padding: 2px 5px; font: 10px Inter,system-ui,sans-serif; }
+.command-backdrop { position: fixed; inset: 0; z-index: 100; background: #000b; display: flex; align-items: flex-start; justify-content: center; padding: min(20vh,140px) 18px 25px; }
+.command-dialog { border: 1px solid #45454c; box-shadow: 0 20px 90px #000b; border-radius: 10px; background: #18181b; width: min(100%, 610px); max-height: min(550px, 75vh); overflow: hidden; display: flex; flex-direction: column; }
+.command-header { height: 58px; display: flex; align-items: center; gap: 12px; padding: 0 19px; border-bottom: 1px solid #333339; color: #adadb5; }
+.command-header input { flex: 1; outline: none; min-width: 0; border: none; background: transparent; color: #fafafa; font-size: 14px; }
+.command-results { padding: 9px; overflow-y: auto; }
+.command-section { color: #777782; font-size: 10px; letter-spacing: .8px; font-weight: 700; padding: 12px 11px 8px; }
+.command-result { display: flex; align-items: center; width: 100%; gap: 12px; padding: 10px 11px; min-height: 40px; color: #e3e3e7; background: transparent; border: 0; text-align: left; border-radius: 6px; }
+.command-result:hover,.command-result:focus-visible { background: #303036; }
+.command-result > span:first-of-type { min-width: 0; flex: 1; display: grid; gap: 3px; font-size: 11.5px; }
+.command-result small { color: #93939d; font-size: 10px; }
+.command-result > svg:last-child { margin-left: auto; color: #8c8c95; }
+.command-score { color: #99d9b1; font-size: 11px; }
+.command-empty { color: #9999a1; font-size: 12px; padding: 28px 11px; text-align: center; }
+.command-footer { border-top: 1px solid #313136; padding: 11px 16px; display: flex; justify-content: flex-end; gap: 16px; color: #868690; font-size: 10px; }
+.command-footer span { display: flex; align-items: center; gap: 5px; }
+.jobs-toolbar-right { display: flex; align-items: center; gap: 12px; }
+.view-switch { display: flex; border: 1px solid #333338; border-radius: 5px; padding: 2px; background: #1b1b1d; }
+.view-switch button { background: none; border: 0; display: grid; place-items: center; padding: 5px; border-radius: 4px; color: #777782; }
+.view-switch button:hover { color: #dedee2; }
+.view-switch button.active { color: #f3f3f3; background: #37373d; }
+.jobs-as-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); padding: 10px; gap: 10px; }
+.dokploy-theme .jobs-as-grid .job-row { border: 1px solid #323238; border-radius: 7px; background: #19191b; flex-wrap: wrap; align-items: flex-start; padding: 14px; gap: 10px; }
+.dokploy-theme .jobs-as-grid .job-row:hover { border-color: #5a5a62; }
+.jobs-as-grid .job-main { flex-basis: calc(100% - 54px); }
+.jobs-as-grid .job-row-right { flex-direction: row; display: flex; justify-content: space-between; align-items: center; width: 100%; border-top: 1px solid #303035; padding-top: 10px; flex-basis: 100%; }
+.jobs-as-grid .job-chevron { display: none; }
+
+/* Collapsed desktop sidebar */
+@media (min-width: 761px) {
+  .dokploy-theme.sidebar-is-collapsed .sidebar { width: 66px; flex-basis: 66px; }
+  .sidebar-is-collapsed .brand { justify-content: center; padding-left: 9px; padding-right: 9px; }
+  .sidebar-is-collapsed .brand-name,.sidebar-is-collapsed .workspace-text,.sidebar-is-collapsed .workspace-chevron,
+  .sidebar-is-collapsed .sidebar .nav-caption,.sidebar-is-collapsed .sidebar .nav-item > span,
+  .sidebar-is-collapsed .sidebar .sync-card,.sidebar-is-collapsed .sidebar-account > div:nth-child(2),.sidebar-is-collapsed .sidebar-account > svg,
+  .sidebar-is-collapsed .sidebar-collapse-button { display: none; }
+  .sidebar-is-collapsed .sidebar nav { padding: 0 10px; margin-bottom: 14px; }
+  .sidebar-is-collapsed .sidebar .nav-item { display: flex; justify-content: center; padding: 10px 4px; }
+  .sidebar-is-collapsed .workspace { margin-left: 10px; margin-right: 10px; padding: 6px; display: flex; justify-content: center; }
+  .sidebar-is-collapsed .sidebar-account { justify-content: center; }
+  .sidebar-is-collapsed .brand-icon { flex-shrink: 0; }
+}
+@media(max-width: 1260px) {
+  .dokploy-theme .dashboard-grid { grid-template-columns: 1fr; }
+  .dokploy-theme .side-panels { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+@media(max-width: 1080px) {
+  .services-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .dokploy-theme .content { padding: 23px; }
+  .command-trigger { min-width: 160px; }
+  .command-trigger kbd { display: none; }
+}
+@media(max-width: 760px) {
+  .dokploy-theme .sidebar { width: 245px; flex-basis: 245px; transition: transform .2s; }
+  .dokploy-theme .content { padding: 17px 15px; }
+  .dokploy-theme .topbar { padding: 0 14px; }
+  .dokploy-theme .desktop-toggle,.dokploy-theme .topbar-divider,.sidebar-collapse-button { display: none; }
+  .dokploy-theme .mobile-toggle { display: grid; }
+  .dokploy-theme .top-left { gap: 5px; }
+  .dokploy-theme .top-actions { gap: 10px; }
+  .command-trigger { width: 32px; min-width: 32px; padding: 6px; justify-content: center; }
+  .command-trigger span,.command-trigger kbd { display: none; }
+  .project-header { padding: 14px; }
+  .project-identity h2 { font-size: 13px; }
+  .project-identity p { font-size: 10px; }
+  .project-environment { display: none; }
+  .project-tabs { padding: 6px; gap: 2px; }
+  .project-tabs button { padding: 9px 11px; }
+  .services-grid { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 9px; }
+  .service-tile { min-height: 112px; padding: 12px; }
+  .dokploy-theme .side-panels { grid-template-columns: 1fr; }
+  .dokploy-theme .stats-grid { gap: 9px; }
+  .dokploy-theme .stat-card { padding: 12px; min-height: 116px; }
+  .jobs-as-grid { grid-template-columns: 1fr; }
+  .jobs-toolbar-right > span { display: none; }
+  .command-dialog { max-height: 78vh; }
+}
+@media(prefers-reduced-motion: reduce) {
+  .dokploy-theme .sidebar,.switch-button,.switch-button span { transition: none; }
+}

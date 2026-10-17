@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity, ArrowDownRight, ArrowRight, Bell, Bookmark, BrainCircuit,
   BriefcaseBusiness, Check, CheckCircle2, ChevronDown, ChevronRight, CircleHelp,
   Clock3, ExternalLink, FileText, Filter, Globe2, LayoutDashboard, LoaderCircle,
   LockKeyhole, LogOut, MapPin, Menu, Radar, RefreshCcw, Search, Send,
-  Settings2, ShieldCheck, SlidersHorizontal, Sparkles, Target, ThumbsUp, ThumbsDown, X
+  Settings2, ShieldCheck, SlidersHorizontal, Sparkles, Target, ThumbsUp, ThumbsDown, X,
+  PanelLeftClose, PanelLeftOpen, FolderKanban, Database, Server, Command, List, LayoutGrid, Keyboard, Terminal, ChevronUp
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { SearchWatches, ApplicationBoard, CvUploader } from "./workspaces";
@@ -104,6 +105,11 @@ export default function Home() {
   const [error, setError] = useState("");
   const [toast, setToast] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [commandOpen, setCommandOpen] = useState(false);
+  const [commandQuery, setCommandQuery] = useState("");
+  const [jobView, setJobView] = useState<"list" | "grid">("list");
+  const commandInput = useRef<HTMLInputElement>(null);
   const chosen = jobs.find(j => j.id === selectedId) || null;
   const filtered = useMemo(() => jobs.filter(j => {
     const search = query.toLowerCase();
@@ -112,6 +118,11 @@ export default function Home() {
       && (!search || [j.title, j.company, j.description, j.location].some(s => s.toLowerCase().includes(search)));
   }), [jobs, status, query, remoteOnly]);
   const recommended = jobs.filter(j => j.score >= profile.min_score && j.status !== "ignored").slice(0, 6);
+  const commandPages = menu.filter(entry => entry.label.toLocaleLowerCase("pl").includes(commandQuery.trim().toLocaleLowerCase("pl")));
+  const commandJobs = commandQuery.trim().length >= 2
+    ? jobs.filter(job => [job.title, job.company, job.location].some(field =>
+        field.toLocaleLowerCase("pl").includes(commandQuery.trim().toLocaleLowerCase("pl")))).slice(0, 6)
+    : [];
 
   async function load() {
     try {
@@ -133,6 +144,20 @@ export default function Home() {
   useEffect(() => { void checkAuth(); }, []);
   useEffect(() => { if (auth === "logged") void load(); }, [auth]);
   useEffect(() => { if (toast) { const timer = setTimeout(() => setToast(""), 4500); return () => clearTimeout(timer); } }, [toast]);
+  useEffect(() => {
+    try { setSidebarCollapsed(window.localStorage.getItem("jobpilot-sidebar-collapsed") === "true"); } catch { /* preferences optional */ }
+    const hotkeys = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setCommandOpen(open => !open);
+      } else if (event.key === "Escape") {
+        setCommandOpen(false);
+      }
+    };
+    document.addEventListener("keydown", hotkeys);
+    return () => document.removeEventListener("keydown", hotkeys);
+  }, []);
+  useEffect(() => { if (commandOpen) commandInput.current?.focus(); }, [commandOpen]);
 
   async function synchronize() {
     setBusy("sync"); setError("");
@@ -208,35 +233,108 @@ export default function Home() {
     await api("/api/logout", { method: "POST" }).catch(() => undefined);
     setAuth("guest"); setJobs([]); setSelectedId(null);
   }
-  function navigate(next: Page) { setPage(next); setSelectedId(null); setSidebarOpen(false); setError(""); }
+  function navigate(next: Page) {
+    setPage(next); setSelectedId(null); setSidebarOpen(false); setCommandOpen(false); setError("");
+  }
+  function toggleSidebar() {
+    setSidebarCollapsed(current => {
+      try { window.localStorage.setItem("jobpilot-sidebar-collapsed", String(!current)); } catch { /* no persistence */ }
+      return !current;
+    });
+  }
+  function openSearchJob(jobId: string) {
+    navigate("jobs"); setStatus("all"); setRemoteOnly(false); setQuery(""); setSelectedId(jobId); setCommandOpen(false);
+  }
 
   if (auth === "checking") return <div className="initial-loader"><Radar size={30}/><LoaderCircle className="spin" size={22}/></div>;
   if (auth === "guest") return <LoginScreen onSuccess={() => void checkAuth()}/>;
 
-  return <div className="shell">
+  return <div className={"shell dokploy-theme " + (sidebarCollapsed ? "sidebar-is-collapsed" : "")}>
     <aside className={"sidebar " + (sidebarOpen ? "mobile-open" : "")}>
-      <div className="brand"><div className="brand-icon"><Radar size={20} strokeWidth={2.4}/></div><span>JobPilot</span><span className="brand-version">beta</span></div>
-      <div className="workspace"><div className="workspace-avatar">J</div><div className="workspace-text"><strong>My Workspace</strong><small>Personal instance</small></div><ChevronDown size={15}/></div>
-      <div className="nav-caption">WORKSPACE</div>
-      <nav>{menu.map(item => <button key={item.page} className={"nav-item " + (page === item.page ? "active" : "")} onClick={() => navigate(item.page)}>
+      <div className="brand">
+        <div className="brand-icon"><Radar size={19} strokeWidth={2}/></div>
+        <span className="brand-name">JobPilot <small>v0.4</small></span>
+        <button className="icon-button sidebar-collapse-button" title={sidebarCollapsed ? "Rozwiń menu" : "Zwiń menu"} aria-label={sidebarCollapsed ? "Rozwiń menu" : "Zwiń menu"} onClick={toggleSidebar}>
+          {sidebarCollapsed ? <PanelLeftOpen size={17}/> : <PanelLeftClose size={17}/>}
+        </button>
+      </div>
+      <div className="workspace" title="Personal workspace">
+        <div className="workspace-avatar"><FolderKanban size={17}/></div>
+        <div className="workspace-text"><strong>Personal Workspace</strong><small>Twoje środowisko</small></div>
+        <ChevronDown size={14} className="workspace-chevron"/>
+      </div>
+      <div className="nav-caption">PRACA</div>
+      <nav aria-label="Nawigacja główna">{menu.filter(item => item.page !== "settings").map(item => <button key={item.page} title={item.label} aria-label={item.label}
+        aria-current={page === item.page ? "page" : undefined}
+        className={"nav-item " + (page === item.page ? "active" : "")} onClick={() => navigate(item.page)}>
         <item.icon size={17}/><span>{item.label}</span>{item.page === "notifications" && stats.unread > 0 && <span className="nav-count">{stats.unread}</span>}
       </button>)}</nav>
+      <div className="nav-caption secondary-caption">SYSTEM</div>
+      <nav aria-label="Ustawienia aplikacji"><button className={"nav-item " + (page === "settings" ? "active" : "")} title="Ustawienia" aria-label="Ustawienia" onClick={() => navigate("settings")}><Settings2 size={17}/><span>Ustawienia</span></button></nav>
       <div className="sidebar-bottom">
-        <div className="sync-card"><div className="sync-title"><span className="pulse-dot"/> System aktywny</div><p>Automatyczne wyszukiwanie co 30 minut.</p><div className="sync-time"><Clock3 size={13}/> {shortDate(stats.last_sync.at)}</div></div>
-        <button className="sidebar-account" onClick={logout}><div className="user-avatar">{getInitials(email)}</div><div><strong>{profile.full_name || "Administrator"}</strong><small>{email}</small></div><LogOut size={16}/></button>
+        <div className="sync-card">
+          <div className="sync-title"><span className="pulse-dot"/> Automatyzacja włączona</div>
+          <p>Wyszukiwanie działa w tle.</p>
+          <div className="sync-time"><Clock3 size={13}/> {shortDate(stats.last_sync.at)}</div>
+        </div>
+        <button className="sidebar-account" title="Wyloguj" onClick={logout}><div className="user-avatar">{getInitials(email)}</div><div><strong>{profile.full_name || "Administrator"}</strong><small>{email}</small></div><LogOut size={16}/></button>
       </div>
     </aside>
     {sidebarOpen && <button className="mobile-backdrop" aria-label="Zamknij menu" onClick={() => setSidebarOpen(false)}/>}
     <div className="main-area">
       <header className="topbar">
-        <div className="top-left"><button className="icon-button mobile-toggle" onClick={() => setSidebarOpen(true)} aria-label="Otwórz menu"><Menu size={20}/></button>
-          <span className="breadcrumb">Workspace</span><ChevronRight size={14} className="muted"/><span className="breadcrumb-current">{menu.find(m => m.page === page)?.label}</span>
+        <div className="top-left">
+          <button className="icon-button mobile-toggle" onClick={() => setSidebarOpen(true)} aria-label="Otwórz menu"><Menu size={20}/></button>
+          <button className="icon-button desktop-toggle" onClick={toggleSidebar} aria-label="Zmień szerokość paska bocznego"><PanelLeftOpen size={17}/></button>
+          <span className="topbar-divider"/>
+          <span className="breadcrumb">Projekty</span><ChevronRight size={14} className="muted"/>
+          <span className="breadcrumb">JobPilot</span><ChevronRight size={14} className="muted"/>
+          <span className="breadcrumb-current">{menu.find(m => m.page === page)?.label}</span>
         </div>
-        <div className="top-actions"><span className="top-status"><span className="pulse-dot"/> Monitoring aktywny</span><button className="icon-button inbox-button" onClick={() => navigate("notifications")} aria-label={"Powiadomienia, nieprzeczytane: " + stats.unread}><Bell size={18}/>{stats.unread > 0 && <span className="inbox-badge">{stats.unread > 99 ? "99+" : stats.unread}</span>}</button><div className="top-avatar">{getInitials(email)}</div></div>
+        <div className="top-actions">
+          <button className="command-trigger" onClick={() => { setCommandQuery(""); setCommandOpen(true); }} title="Otwórz wyszukiwanie (Ctrl+K)"><Search size={15}/><span>Szukaj w JobPilot...</span><kbd>Ctrl K</kbd></button>
+          <span className="top-status"><span className="pulse-dot"/> Online</span>
+          <button className="icon-button inbox-button" onClick={() => navigate("notifications")} aria-label={"Powiadomienia, nieprzeczytane: " + stats.unread}><Bell size={18}/>{stats.unread > 0 && <span className="inbox-badge">{stats.unread > 99 ? "99+" : stats.unread}</span>}</button>
+          <div className="top-avatar" title={email}>{getInitials(email)}</div>
+        </div>
       </header>
+      {commandOpen && <div className="command-backdrop" onMouseDown={() => setCommandOpen(false)}>
+        <div className="command-dialog" role="dialog" aria-modal="true" aria-label="Szybkie wyszukiwanie" onMouseDown={e => e.stopPropagation()}>
+          <div className="command-header"><Search size={18}/>
+            <input ref={commandInput} placeholder="Znajdź widok, ofertę lub firmę..." aria-label="Szukaj" value={commandQuery}
+              onChange={e => setCommandQuery(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === "Enter") {
+                  if (commandJobs.length) openSearchJob(commandJobs[0].id);
+                  else if (commandPages.length) navigate(commandPages[0].page);
+                }
+              }}/>
+            <button className="icon-button" onClick={() => setCommandOpen(false)} aria-label="Zamknij wyszukiwanie"><X size={17}/></button>
+          </div>
+          <div className="command-results">
+            {commandPages.length > 0 && <><div className="command-section">NAWIGACJA</div>{commandPages.map(item => <button key={item.page} className="command-result" onClick={() => navigate(item.page)}><item.icon size={17}/><span>{item.label}</span><ArrowRight size={14}/></button>)}</>}
+            {commandJobs.length > 0 && <><div className="command-section">OFERTY PRACY</div>{commandJobs.map(job => <button key={job.id} className="command-result" onClick={() => openSearchJob(job.id)}><BriefcaseBusiness size={17}/><span>{job.title}<small>{job.company}</small></span><span className="command-score">{job.score}%</span></button>)}</>}
+            {commandJobs.length === 0 && commandPages.length === 0 && <p className="command-empty">Brak wyników. Spróbuj innej frazy.</p>}
+          </div>
+          <div className="command-footer"><span><kbd>↵</kbd> Wybierz pierwszy</span><span><kbd>ESC</kbd> Zamknij</span></div>
+        </div>
+      </div>}
       <main className="content">
         {error && <div className="notice-error"><CircleHelp size={17}/>{error}<button onClick={() => setError("")} aria-label="Zamknij błąd"><X size={15}/></button></div>}
         {toast && <div className="toast"><CheckCircle2 size={17}/>{toast}</div>}
+        <div className="project-header">
+          <div className="project-identity"><div className="project-icon"><Radar size={22}/></div>
+            <div><h2>JobPilot <span className="project-version">Workspace</span></h2>
+              <p>Inteligentne wyszukiwanie i zarządzanie rekrutacjami</p>
+            </div>
+          </div>
+          <div className="project-environment"><span className="pulse-dot"/> Instancja prywatna <span className="project-separator">/</span> Produkcja</div>
+        </div>
+        <div className="project-tabs" role="navigation" aria-label="Sekcje JobPilot">
+          {menu.filter(m => m.page !== "notifications").map(item => <button key={item.page}
+            className={page === item.page ? "active" : ""} aria-current={page === item.page ? "page" : undefined}
+            onClick={() => navigate(item.page)}>{item.label}</button>)}
+        </div>
         {page === "dashboard" && <>
           <div className="heading-row"><div><div className="eyebrow"><Sparkles size={14}/> TWOJE CENTRUM KARIERY</div><h1>Przegląd</h1><p>Kontroluj poszukiwania pracy w jednym miejscu.</p></div>
             <button className="btn primary" disabled={busy === "sync"} onClick={synchronize}>{busy === "sync" ? <LoaderCircle size={16} className="spin"/> : <RefreshCcw size={16}/>} Skanuj oferty</button></div>
@@ -245,6 +343,16 @@ export default function Home() {
             <StatCard label="Dopasowane" value={stats.matched} icon={Target} sub={"Wynik ≥ " + profile.min_score + "%"} accent/>
             <StatCard label="Zapisane" value={stats.saved} icon={Bookmark} sub={"Oceny: " + stats.likes + " lubię / " + stats.dislikes + " nie interesuje"}/>
             <StatCard label="Aplikacje" value={stats.applied} icon={Send} sub="Wysłane i w rekrutacji"/>
+          </div>
+          <div className="service-heading"><div><h2>Źródła ofert</h2><p>Połączenia skonfigurowane na tej instancji</p></div><button className="btn secondary" onClick={() => navigate("settings")}><Settings2 size={14}/> Konfiguruj</button></div>
+          <div className="services-grid">
+            {["Arbeitnow", "Adzuna", "Greenhouse", "Lever"].map(source => <button
+              key={source} className="service-tile" onClick={() => navigate(source === "Adzuna" ? "watches" : "settings")}>
+              <div className="service-tile-head"><span className="service-tile-icon"><Database size={17}/></span><span className={"service-indicator " + (stats.sources.includes(source) ? "active" : "")}/></div>
+              <strong>{source}</strong>
+              <small>{stats.sources.includes(source) ? "Skonfigurowane" : "Nie skonfigurowano"}</small>
+              <ChevronRight size={15} className="service-arrow"/>
+            </button>)}
           </div>
           <div className="dashboard-grid">
             <section className="panel recommendations">
@@ -279,8 +387,15 @@ export default function Home() {
             <label className="toggle-filter"><input type="checkbox" checked={remoteOnly} onChange={e => setRemoteOnly(e.target.checked)}/> Tylko zdalne</label>
           </div>
           <div className="jobs-layout"><section className="panel job-list-panel">
-            <div className="panel-bar"><strong>{filtered.length} ofert</strong><span>Sortowanie: najlepsze dopasowanie <ArrowDownRight size={14}/></span></div>
-            {filtered.length ? <div className="list-jobs">{filtered.map(job => <JobRow key={job.id} job={job} selected={selectedId === job.id} onClick={() => setSelectedId(job.id)}/>)}</div> :
+            <div className="panel-bar jobs-panel-toolbar"><strong>{filtered.length} ofert</strong>
+              <div className="jobs-toolbar-right"><span>Najlepsze dopasowanie <ArrowDownRight size={14}/></span>
+                <div className="view-switch" role="group" aria-label="Widok ofert">
+                  <button onClick={() => setJobView("list")} className={jobView === "list" ? "active" : ""} aria-pressed={jobView === "list"} title="Lista" aria-label="Widok listy"><List size={15}/></button>
+                  <button onClick={() => setJobView("grid")} className={jobView === "grid" ? "active" : ""} aria-pressed={jobView === "grid"} title="Kafelki" aria-label="Widok kafelków"><LayoutGrid size={15}/></button>
+                </div>
+              </div>
+            </div>
+            {filtered.length ? <div className={jobView === "grid" ? "list-jobs jobs-as-grid" : "list-jobs"}>{filtered.map(job => <JobRow key={job.id} job={job} selected={selectedId === job.id} onClick={() => setSelectedId(job.id)}/>)}</div> :
              <Empty icon={Search} title="Brak ofert" message="Zmień filtry albo rozpocznij skanowanie."/>}
           </section>
           <section className="panel detail-panel">{chosen ? <>
