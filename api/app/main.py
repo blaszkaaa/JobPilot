@@ -262,7 +262,7 @@ async def refresh():
                     exists = db.execute("SELECT id FROM jobs WHERE id=?", (job["id"],)).fetchone()
                     db.execute("""INSERT INTO jobs
                         (id,title,company,location,remote,description,url,source,posted_at,score,reason,discovered_at)
-                        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+                        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
                         ON CONFLICT(id) DO UPDATE SET
                         title=excluded.title,company=excluded.company,location=excluded.location,
                         remote=excluded.remote,description=excluded.description,url=excluded.url,
