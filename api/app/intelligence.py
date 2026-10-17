@@ -24,18 +24,20 @@ def rank(jobs, profile, feedback=None):
     excluded = terms(profile.get("excluded", ""))
     reference = ((profile.get("cv_text") or "") + " " + " ".join(keywords * 3)).strip()
     corpus = [reference or "Python developer"] + [job_text(job) for job in jobs]
-    corpus += [job_text(item) for item in feedback]
     similarities = [0.0] * len(jobs)
     feedback_similarities = None
     try:
-        matrix = TfidfVectorizer(
+        vectorizer = TfidfVectorizer(
             ngram_range=(1, 2), max_features=10000, sublinear_tf=True,
             strip_accents="unicode"
-        ).fit_transform(corpus)
-        similarities = cosine_similarity(matrix[0:1], matrix[1:len(jobs)+1]).ravel()
+        )
+        matrix = vectorizer.fit_transform(corpus)
+        similarities = cosine_similarity(matrix[0:1], matrix[1:]).ravel()
         if feedback:
-            feedback_similarities = cosine_similarity(
-                matrix[1:len(jobs)+1], matrix[len(jobs)+1:])
+            # Use the *same* vocabulary as the baseline: votes must not alter
+            # the underlying IDF/score of the job being voted on.
+            feedback_matrix = vectorizer.transform([job_text(item) for item in feedback])
+            feedback_similarities = cosine_similarity(matrix[1:], feedback_matrix)
     except ValueError:
         pass
 
